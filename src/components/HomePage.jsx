@@ -70,22 +70,18 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
   const [month, setMonth] = useState(getCurrentMonth())
 
   const availableMonths = useMemo(() => {
-    if (expenses.length === 0) return [getCurrentMonth()]
-    let min = expenses[0].firstPaymentMonth
-    let max = expenses[0].firstPaymentMonth
-    expenses.forEach(exp => {
-      if (exp.firstPaymentMonth < min) min = exp.firstPaymentMonth
-      const end = addMonths(exp.firstPaymentMonth, exp.installments - 1)
-      if (end > max) max = end
-    })
+    const now = getCurrentMonth()
+    // Range: 6 months back, 18 months forward from today
+    const start = addMonths(now, -6)
+    const end = addMonths(now, 18)
     const months = []
-    let current = min
-    while (current <= max) {
+    let current = start
+    while (current <= end) {
       months.push(current)
       current = addMonths(current, 1)
     }
     return months
-  }, [expenses])
+  }, [])
 
   const people = users.length > 0 ? users.map(u => u.displayName) : ['nahuel', 'Caro', 'Juli']
   const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName

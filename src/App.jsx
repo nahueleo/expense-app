@@ -23,19 +23,20 @@ export default function App() {
   const isAdmin = user?.email === ADMIN_EMAIL
   const isAllowed = isAdmin || users.some(u => u.email === user?.email?.toLowerCase())
 
-  // Auto-register admin in users collection on first login
+  // Auto-register admin in users collection only if no user with that email exists
   useEffect(() => {
-    if (!user || usersLoading) return
+    if (!user || usersLoading || !isAdmin) return
+    if (users.length === 0) return // wait until users are loaded
     const alreadyRegistered = users.some(u => u.email === user.email?.toLowerCase())
-    if (!alreadyRegistered && isAdmin) {
+    if (!alreadyRegistered) {
       addDoc(collection(db, 'users'), {
         email: user.email.toLowerCase(),
-        displayName: user.displayName || 'Nahuel',
+        displayName: 'nahuel',
         mpAlias: '',
         addedAt: serverTimestamp(),
       })
     }
-  }, [user, users, usersLoading, isAdmin])
+  }, [user, usersLoading, isAdmin]) // intentionally exclude `users` to run only once
 
   useEffect(() => {
     if (!user) return
