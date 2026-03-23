@@ -38,6 +38,7 @@ export default function ExpenseList({ expenses, onDeleted }) {
               <th>Cuota mensual</th>
               <th>C/U</th>
               <th>Primer mes</th>
+              <th>Cargado por</th>
               <th></th>
             </tr>
           </thead>
@@ -54,6 +55,7 @@ export default function ExpenseList({ expenses, onDeleted }) {
                   <td className="right">${formatARS(installmentAmt)}</td>
                   <td className="right">${formatARS(sharePerPerson)}</td>
                   <td className="center">{formatMonth(exp.firstPaymentMonth)}</td>
+                  <td className="text-muted">{exp.createdBy || '—'}</td>
                   <td>
                     <button
                       className="btn-delete"

@@ -2,6 +2,13 @@ import { useMemo, useState } from 'react'
 
 const PEOPLE = ['nahuel', 'Caro', 'Juli']
 
+// Alias de Mercado Pago de cada persona
+const MP_ALIASES = {
+  nahuel: 'nahuel.mp',
+  Caro: 'caro.mp',
+  Juli: 'juli.mp',
+}
+
 function addMonths(yearMonth, n) {
   const [y, m] = yearMonth.split('-').map(Number)
   const date = new Date(y, m - 1 + n, 1)
@@ -127,7 +134,16 @@ export default function MonthlySummary({ expenses }) {
                           <span className={`badge badge-${t.from}`}>{t.from}</span>
                           <span className="arrow"> le debe </span>
                           <span className={`badge badge-${t.to}`}>{t.to}</span>
-                          <span className="amount"> ${formatARS(t.amount)}</span>
+                          <span className="amount">${formatARS(t.amount)}</span>
+                          <a
+                            href={`https://www.mercadopago.com.ar/transfer/new?alias=${MP_ALIASES[t.to]}&amount=${Math.round(t.amount)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="btn-mp"
+                            title={`Pagar a ${t.to} (alias: ${MP_ALIASES[t.to]})`}
+                          >
+                            Pagar con MP
+                          </a>
                         </div>
                       ))}
                     </div>

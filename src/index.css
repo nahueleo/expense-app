@@ -303,6 +303,7 @@ td {
 
 td.right { text-align: right; font-variant-numeric: tabular-nums; }
 td.center { text-align: center; }
+td.text-muted { color: var(--text-muted); font-size: 13px; }
 
 /* ── MONTHLY SUMMARY ── */
 .monthly-summary h2 {
@@ -417,10 +418,27 @@ td.center { text-align: center; }
 .transaction .arrow { color: var(--text-muted); }
 
 .transaction .amount {
-  margin-left: auto;
   font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+.btn-mp {
+  display: inline-block;
+  background: #009ee3;
+  color: white;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.btn-mp:hover {
+  background: #0082c0;
 }
 
 /* Balances */
@@ -478,6 +496,110 @@ td.center { text-align: center; }
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
   margin-left: auto;
+}
+
+/* ── LOGIN ── */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--green-dark), var(--green-mid));
+  padding: 24px;
+}
+
+.login-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  max-width: 360px;
+  width: 100%;
+}
+
+.login-card h1 {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--green-dark);
+  margin-bottom: 8px;
+}
+
+.login-subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 20px;
+  background: white;
+  color: #3c4043;
+  border: 1.5px solid #dadce0;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+.btn-google:hover:not(:disabled) {
+  background: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-google:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-error {
+  margin-top: 14px;
+  color: var(--red);
+  font-size: 13px;
+}
+
+/* ── HEADER USER ── */
+.header-user {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.5);
+}
+
+.user-name {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.btn-logout {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-logout:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 /* ── MISC ── */

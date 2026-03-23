@@ -15,7 +15,7 @@ const emptyForm = {
   firstPaymentMonth: defaultMonth,
 }
 
-export default function ExpenseForm({ onAdded }) {
+export default function ExpenseForm({ onAdded, user }) {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -49,6 +49,7 @@ export default function ExpenseForm({ onAdded }) {
         totalAmount: parseFloat(form.totalAmount),
         firstPaymentMonth: form.firstPaymentMonth,
         createdAt: serverTimestamp(),
+        createdBy: user?.displayName || user?.email || 'desconocido',
       })
       setForm(emptyForm)
       onAdded?.()
