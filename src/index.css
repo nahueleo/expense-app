@@ -152,6 +152,13 @@ header h1 {
   letter-spacing: -1px;
 }
 
+.payment-month-label {
+  font-size: 14px;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
 .payment-alias-row {
   display: flex;
   align-items: center;

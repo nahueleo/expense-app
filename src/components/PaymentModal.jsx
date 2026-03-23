@@ -4,20 +4,12 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 import { formatARS } from '../utils/format'
-import { formatMonthLabel, getCurrentMonth, addMonths } from '../utils/dates'
-
-const FUTURE_MONTHS = 3
-
-function buildMonthOptions() {
-  const now = getCurrentMonth()
-  return Array.from({ length: FUTURE_MONTHS + 1 }, (_, i) => addMonths(now, i))
-}
+import { formatMonthLabel, getCurrentMonth } from '../utils/dates'
 
 export default function PaymentModal({ transaction, toUser, activityId, fromName, users, onClose, initialMonth }) {
-  const [forMonth, setForMonth]   = useState(() => initialMonth || getCurrentMonth())
+  const forMonth = initialMonth || getCurrentMonth()
   const [confirming, setConfirming] = useState(false)
   const [copied, setCopied]       = useState(null)
-  const monthOptions              = buildMonthOptions()
 
   const alias = toUser?.mpAlias || toUser?.modoAlias || null
 
@@ -62,15 +54,7 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
           <span className="payment-amount-value">${formatARS(transaction.amount)}</span>
         </div>
 
-        {/* Month selector */}
-        <div className="form-group">
-          <label>Corresponde al mes</label>
-          <select value={forMonth} onChange={e => setForMonth(e.target.value)}>
-            {monthOptions.map(m => (
-              <option key={m} value={m}>{formatMonthLabel(m)}</option>
-            ))}
-          </select>
-        </div>
+        <p className="payment-month-label">Mes: <strong>{formatMonthLabel(forMonth)}</strong></p>
 
         {/* Payment aliases */}
         {toUser?.mpAlias && (
