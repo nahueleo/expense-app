@@ -1,6 +1,20 @@
 import { useMemo, useState } from 'react'
-import { SiMercadopago } from 'react-icons/si'
-import { BsWallet2 } from 'react-icons/bs'
+
+function IconMP() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12.018 0C5.394 0 0 5.394 0 12.018c0 6.623 5.394 12.017 12.018 12.017 6.623 0 12.017-5.394 12.017-12.017C24.035 5.394 18.641 0 12.018 0zm5.546 14.413c-1.19 1.916-3.28 3.195-5.668 3.195-2.388 0-4.478-1.28-5.668-3.195H4.83c1.312 2.852 4.19 4.83 7.517 4.83a8.37 8.37 0 0 0 7.517-4.83h-1.3zm.3-4.745H16.46a6.72 6.72 0 0 0-4.394-1.648 6.72 6.72 0 0 0-4.394 1.648H6.274A8.37 8.37 0 0 1 12.066 7.2a8.37 8.37 0 0 1 5.792 2.468z"/>
+    </svg>
+  )
+}
+
+function IconModo() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9a1.5 1.5 0 0 1 1.432-1.499L12.136.326zm-3.137 4.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM5.5 4a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/>
+    </svg>
+  )
+}
 import { getBadgeStyle } from '../utils/badges'
 import { normalizePayerKey, getPayerDisplay } from '../utils/users'
 
@@ -164,7 +178,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                     rel="noopener noreferrer"
                                     className="btn-pay btn-pay-mp"
                                     title="Pagar con MercadoPago"
-                                  ><SiMercadopago size={16} /></a>
+                                  ><IconMP /></a>
                                 )}
                                 {modoAliases[t.to] && (
                                   <a
@@ -173,7 +187,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                     rel="noopener noreferrer"
                                     className="btn-pay btn-pay-modo"
                                     title="Pagar con MODO"
-                                  ><BsWallet2 size={16} /></a>
+                                  ><IconModo /></a>
                                 )}
                               </div>
                             </>
@@ -211,7 +225,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                 rel="noopener noreferrer"
                                 className="btn-pay btn-pay-mp"
                                 title="Pagar con MercadoPago"
-                              ><SiMercadopago size={16} /></a>
+                              ><IconMP /></a>
                             )}
                             {modoAliases[t.to] && (
                               <a
@@ -220,7 +234,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                 rel="noopener noreferrer"
                                 className="btn-pay btn-pay-modo"
                                 title="Pagar con MODO"
-                              ><BsWallet2 size={16} /></a>
+                              ><IconModo /></a>
                             )}
                           </div>
                         </div>
