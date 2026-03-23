@@ -153,7 +153,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                               <span className="my-amount negative">-${formatARS(t.amount)}</span>
                               {mpAliases[t.to] && (
                                 <a
-                                  href={`https://www.mercadopago.com.ar/transfer/new?alias=${mpAliases[t.to]}&amount=${Math.round(t.amount)}`}
+                                  href={`https://link.mercadopago.com.ar/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="btn-mp"
@@ -190,7 +190,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                           <span className="amount">${formatARS(t.amount)}</span>
                           {mpAliases[t.to] && (
                             <a
-                              href={`https://www.mercadopago.com.ar/transfer/new?alias=${mpAliases[t.to]}&amount=${Math.round(t.amount)}`}
+                              href={`https://link.mercadopago.com.ar/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="btn-mp"
