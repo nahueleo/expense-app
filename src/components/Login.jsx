@@ -31,7 +31,6 @@ export default function Login() {
     <div className="login-screen">
       <div className="login-card">
         <h1>Gastos Compartidos</h1>
-        <p className="login-subtitle">nahuel · Caro · Juli</p>
         <button onClick={handleLogin} disabled={loading} className="btn-google">
           {loading ? 'Iniciando...' : 'Iniciar sesión con Google'}
         </button>

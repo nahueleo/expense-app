@@ -17,11 +17,13 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
   const isActivityAdmin = currentActivity?.admins?.includes(currentUserDoc?.email)
   const isAppAdmin = currentUserDoc?.isAdmin === true
 
-  // Members of current activity
-  const memberEmails = currentActivity?.members ?? []
+  // Members of current activity — if no activity, show all users
+  const memberEmails = currentActivity?.members ?? users.map(u => u.email)
   const activityMembers = users.filter(u => memberEmails.includes(u.email))
-  // Invited but not yet registered
-  const pendingEmails = memberEmails.filter(email => !users.find(u => u.email === email))
+  // Invited but not yet registered (only relevant when an activity is selected)
+  const pendingEmails = currentActivity
+    ? memberEmails.filter(email => !users.find(u => u.email === email))
+    : []
 
   // ── Activity member management ──
   async function addMemberToActivity(email) {
@@ -35,8 +37,23 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
   async function removeMemberFromActivity(email) {
     if (!currentActivity) return
     if (!window.confirm(`Quitar a ${email} de esta actividad?`)) return
+    const activityAdmins = currentActivity.admins ?? []
     await updateDoc(doc(db, 'activities', currentActivity.id), {
       members: memberEmails.filter(e => e !== email),
+      admins: activityAdmins.filter(e => e !== email),
+    })
+  }
+
+  async function toggleActivityAdmin(email) {
+    if (!currentActivity) return
+    const activityAdmins = currentActivity.admins ?? []
+    const isCurrentlyAdmin = activityAdmins.includes(email)
+    // Can't remove yourself as activity admin if you're the only one
+    if (isCurrentlyAdmin && email === currentUserDoc?.email && activityAdmins.length === 1) return
+    await updateDoc(doc(db, 'activities', currentActivity.id), {
+      admins: isCurrentlyAdmin
+        ? activityAdmins.filter(e => e !== email)
+        : [...activityAdmins, email],
     })
   }
 
@@ -107,10 +124,10 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
                   placeholder="Nombre" style={{ width: 90 }} />
                 <input className="edit-input" value={editForm.mpAlias}
                   onChange={e => setEditForm(f => ({ ...f, mpAlias: e.target.value }))}
-                  placeholder="alias.mp" style={{ flex: 1 }} />
+                  placeholder="https://mpago.la/xxxxxx" style={{ flex: 1 }} />
                 <input className="edit-input" value={editForm.modoAlias}
                   onChange={e => setEditForm(f => ({ ...f, modoAlias: e.target.value }))}
-                  placeholder="alias.modo" style={{ flex: 1 }} />
+                  placeholder="alias MODO" style={{ flex: 1 }} />
                 <button className="btn-save" onClick={() => handleSaveEdit(u.id)}>OK</button>
                 <button className="btn-cancel" onClick={() => setEditingId(null)}>✕</button>
               </>
@@ -119,18 +136,40 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
                 <span className="badge" style={getBadgeStyle(u.displayName, activityMembers)}>{u.displayName}</span>
                 <div className="user-details">
                   <span className="user-email">{u.email}</span>
+                  <div className="user-roles">
+                    {currentActivity?.admins?.includes(u.email) && (
+                      <span className="role-badge role-activity-admin">Admin actividad</span>
+                    )}
+                    {u.isAdmin && (
+                      <span className="role-badge role-app-admin">Admin app</span>
+                    )}
+                  </div>
                   <span className="user-mp-alias">
-                    {u.mpAlias ? `MP: ${u.mpAlias}` : ''}
+                    {u.mpAlias ? '✓ Link MP' : ''}
                     {u.mpAlias && u.modoAlias ? ' · ' : ''}
-                    {u.modoAlias ? `MODO: ${u.modoAlias}` : ''}
-                    {!u.mpAlias && !u.modoAlias ? 'Sin alias de pago' : ''}
+                    {u.modoAlias ? `✓ MODO: ${u.modoAlias}` : ''}
+                    {!u.mpAlias && !u.modoAlias ? 'Sin medios de pago' : ''}
                   </span>
                 </div>
+
+                {/* Activity admin toggle — visible to activity admins and app admins */}
+                {currentActivity && (isActivityAdmin || isAppAdmin) && (
+                  <button
+                    className={`btn-admin-toggle ${currentActivity.admins?.includes(u.email) ? 'is-admin' : ''}`}
+                    onClick={() => toggleActivityAdmin(u.email)}
+                    title={currentActivity.admins?.includes(u.email) ? 'Quitar admin de actividad' : 'Hacer admin de actividad'}
+                    disabled={currentActivity.admins?.includes(u.email) && u.email === currentUserDoc?.email && (currentActivity.admins?.length ?? 0) <= 1}
+                  >
+                    {currentActivity.admins?.includes(u.email) ? '⚑' : '⚐'}
+                  </button>
+                )}
+
+                {/* App admin toggle — only visible to app admins */}
                 {isAppAdmin && (
                   <button
                     className={`btn-admin-toggle ${u.isAdmin ? 'is-admin' : ''}`}
                     onClick={() => toggleAdmin(u)}
-                    title={u.isAdmin ? 'Quitar admin' : 'Hacer admin'}
+                    title={u.isAdmin ? 'Quitar admin de app' : 'Hacer admin de app'}
                     disabled={u.id === currentUserDoc?.id && u.isAdmin}
                   >
                     {u.isAdmin ? '★' : '☆'}
@@ -178,7 +217,7 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
               type="button"
               className="btn-invite-add"
               onClick={() => addMemberToActivity(inviteEmail)}
-              disabled={saving}
+              disabled={!inviteEmail.trim()}
             >+</button>
           </div>
           <p className="member-hint">Si ya tiene cuenta, aparece arriba. Si no, queda pendiente hasta que se registre.</p>

@@ -6,13 +6,8 @@ const PALETTE = [
   { background: '#f3e5f5', color: '#6a1b9a' },
 ]
 
-// Fallback for existing data with hardcoded names
-const LEGACY = { nahuel: 0, Caro: 1, Juli: 2 }
-
 export function getBadgeStyle(displayName, users) {
   const idx = users.findIndex(u => u.displayName === displayName)
   if (idx !== -1) return PALETTE[idx % PALETTE.length]
-  const legacyIdx = LEGACY[displayName]
-  if (legacyIdx !== undefined) return PALETTE[legacyIdx]
   return { background: '#eee', color: '#555' }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, orderBy, query, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { db, auth } from './firebase'
 import { useAuth } from './AuthContext'
@@ -14,7 +14,6 @@ import UserManager from './components/UserManager'
 import ActivitySwitcher from './components/ActivitySwitcher'
 import ActivitiesOverview from './components/ActivitiesOverview'
 
-const BOOTSTRAP_EMAIL = 'nahueleo@gmail.com'
 
 const Icons = {
   home: <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>,
@@ -61,11 +60,9 @@ export default function App() {
         photoURL: user.photoURL || '',
         mpAlias: '',
         modoAlias: '',
-        isAdmin: user.email?.toLowerCase() === BOOTSTRAP_EMAIL,
+        isAdmin: false,
         addedAt: serverTimestamp(),
       })
-    } else if (user.email?.toLowerCase() === BOOTSTRAP_EMAIL && !existingDoc.isAdmin) {
-      updateDoc(doc(db, 'users', existingDoc.id), { isAdmin: true })
     }
   }, [user, usersLoading, users])
 

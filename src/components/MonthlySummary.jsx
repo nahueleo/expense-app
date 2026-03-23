@@ -1,15 +1,7 @@
 import { useMemo, useState } from 'react'
-
-function IconMP() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12.018 0C5.394 0 0 5.394 0 12.018c0 6.623 5.394 12.017 12.018 12.017 6.623 0 12.017-5.394 12.017-12.017C24.035 5.394 18.641 0 12.018 0zm5.546 14.413c-1.19 1.916-3.28 3.195-5.668 3.195-2.388 0-4.478-1.28-5.668-3.195H4.83c1.312 2.852 4.19 4.83 7.517 4.83a8.37 8.37 0 0 0 7.517-4.83h-1.3zm.3-4.745H16.46a6.72 6.72 0 0 0-4.394-1.648 6.72 6.72 0 0 0-4.394 1.648H6.274A8.37 8.37 0 0 1 12.066 7.2a8.37 8.37 0 0 1 5.792 2.468z"/>
-    </svg>
-  )
-}
-
 import { getBadgeStyle } from '../utils/badges'
 import { normalizePayerKey, getPayerDisplay } from '../utils/users'
+import PayButtons from './PayButtons'
 
 function addMonths(yearMonth, n) {
   const [y, m] = yearMonth.split('-').map(Number)
@@ -95,16 +87,9 @@ function getActiveExpenses(expenses, month) {
 export default function MonthlySummary({ expenses, users, currentUserEmail }) {
   const [expanded, setExpanded] = useState({})
 
-  const people = users.length > 0
-    ? users.map(u => u.displayName)
-    : ['nahuel', 'Caro', 'Juli']
+  const people = users.map(u => u.displayName)
 
-  const mpAliases = Object.fromEntries(
-    users.map(u => [u.displayName, u.mpAlias]).filter(([, alias]) => alias)
-  )
-  const modoAliases = Object.fromEntries(
-    users.map(u => [u.displayName, u.modoAlias || u.email]).filter(([, alias]) => alias)
-  )
+  const userByName = Object.fromEntries(users.map(u => [u.displayName, u]))
 
   // Current logged-in user's display name (for personalized view)
   const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
@@ -163,26 +148,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                               <span>Debés pagarle a</span>
                               <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                               <span className="my-amount negative">-${formatARS(t.amount)}</span>
-                              <div className="pay-buttons">
-                                {mpAliases[t.to] && (
-                                  <a
-                                    href={`mercadopago://payments/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="btn-pay btn-pay-mp"
-                                    title="Pagar con MercadoPago"
-                                  ><IconMP /></a>
-                                )}
-                                {modoAliases[t.to] && (
-                                  <a
-                                    href={`https://www.modo.com.ar/pagar?amount=${Math.round(t.amount)}&alias=${modoAliases[t.to]}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="btn-pay btn-pay-modo"
-                                    title="Pagar con MODO"
-                                  >MODO</a>
-                                )}
-                              </div>
+                              <PayButtons user={userByName[t.to]} amount={t.amount} />
                             </>
                           ) : (
                             <>
@@ -210,26 +176,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                           <span className="arrow"> le debe </span>
                           <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                           <span className="amount">${formatARS(t.amount)}</span>
-                          <div className="pay-buttons">
-                            {mpAliases[t.to] && (
-                              <a
-                                href={`mercadopago://payments/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-pay btn-pay-mp"
-                                title="Pagar con MercadoPago"
-                              ><IconMP /></a>
-                            )}
-                            {modoAliases[t.to] && (
-                              <a
-                                href={`https://www.modo.com.ar/pagar?amount=${Math.round(t.amount)}&alias=${modoAliases[t.to]}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-pay btn-pay-modo"
-                                title="Pagar con MODO"
-                              >MODO</a>
-                            )}
-                          </div>
+                          <PayButtons user={userByName[t.to]} amount={t.amount} />
                         </div>
                       ))}
                     </div>
