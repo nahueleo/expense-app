@@ -951,6 +951,260 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
   background: rgba(255,255,255,0.25);
 }
 
+/* ── EXPENSE LIST V2 ── */
+.expense-list-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.exp-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.exp-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 12px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.exp-stat-value {
+  font-size: clamp(16px, 3.5vw, 22px);
+  font-weight: 800;
+  color: var(--green-dark);
+  font-variant-numeric: tabular-nums;
+}
+
+.exp-stat-value.green { color: #2b8a3e; }
+.exp-stat-value.red { color: var(--red); }
+
+.exp-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+.exp-overall-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+}
+
+.exp-overall-bar {
+  flex: 1;
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.exp-overall-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-mid), var(--green-accent));
+  border-radius: 5px;
+  transition: width 0.5s ease;
+  min-width: 2px;
+}
+
+.exp-overall-pct {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green-dark);
+  white-space: nowrap;
+}
+
+/* Expense cards */
+.exp-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  transition: border-color 0.15s;
+}
+
+.exp-card.status-finished {
+  opacity: 0.7;
+  border-left: 3px solid #2b8a3e;
+}
+
+.exp-card.status-active {
+  border-left: 3px solid var(--green-accent);
+}
+
+.exp-card.status-pending {
+  border-left: 3px solid #adb5bd;
+}
+
+.exp-card.editing {
+  border: 2px solid var(--green-accent);
+  background: #fffbf0;
+}
+
+.exp-card-header {
+  margin-bottom: 10px;
+}
+
+.exp-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.exp-card-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.exp-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.exp-status-pill.status-active { background: #d3f9d8; color: #2b8a3e; }
+.exp-status-pill.status-finished { background: var(--green-pale); color: var(--green-dark); }
+.exp-status-pill.status-pending { background: #f1f3f5; color: #868e96; }
+
+.exp-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.exp-meta-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* Progress bar */
+.exp-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.exp-progress-bar {
+  flex: 1;
+  height: 7px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.exp-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green-mid), var(--green-accent));
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 2px;
+}
+
+.exp-progress-pct {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 30px;
+  text-align: right;
+}
+
+/* Amounts row */
+.exp-card-amounts {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.exp-amount-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 6px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.exp-amount-item:last-child { border-right: none; }
+
+.exp-amount-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+
+.exp-amount-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.exp-amount-value.green { color: #2b8a3e; }
+.exp-amount-value.red { color: var(--red); }
+
+/* Footer */
+.exp-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.exp-created-by {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Edit form inside card */
+.exp-edit-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.exp-edit-grid .form-group {
+  min-width: 130px;
+}
+
+.exp-edit-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-save { padding: 8px 18px; }
+.btn-cancel { padding: 8px 14px; }
+
 /* ── USER MANAGER ── */
 .user-manager {
   background: var(--surface);
