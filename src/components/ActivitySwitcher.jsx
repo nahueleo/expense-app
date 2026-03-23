@@ -6,9 +6,16 @@ import { db } from '../firebase'
 const EMOJIS = ['✈️','🏔️','🏖️','🎉','🏕️','🚗','🛳️','🎿','🏄','🎭','🍽️','🏠','⚽','🎸','💼','🌍']
 const TYPES  = ['Viaje','Evento','Casa','Deporte','Trabajo','Otro']
 
-export default function ActivitySwitcher({ activities, currentActivityId, onSelect, currentUserEmail, users }) {
-  const [open, setOpen] = useState(false)
+export default function ActivitySwitcher({ activities, currentActivityId, onSelect, currentUserEmail, users, open: externalOpen, onOpenChange }) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = externalOpen !== undefined ? externalOpen : internalOpen
   const [creating, setCreating] = useState(false)
+
+  function setOpen(val) {
+    setInternalOpen(val)
+    onOpenChange?.(val)
+    if (!val) setCreating(false)
+  }
   const [form, setForm] = useState({ name: '', emoji: '✈️', type: 'Viaje', members: [] })
   const [saving, setSaving] = useState(false)
 
@@ -64,18 +71,6 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
                 <h3 className="sheet-title">Actividades</h3>
 
                 <div className="activity-list">
-                  {/* All */}
-                  <button
-                    className={`activity-item ${!currentActivityId ? 'active' : ''}`}
-                    onClick={() => { onSelect(null); setOpen(false) }}
-                  >
-                    <span className="activity-item-emoji">🌍</span>
-                    <div className="activity-item-info">
-                      <span className="activity-item-name">Todas las actividades</span>
-                    </div>
-                    {!currentActivityId && <span className="activity-check">✓</span>}
-                  </button>
-
                   {activities.map(a => (
                     <button
                       key={a.id}
