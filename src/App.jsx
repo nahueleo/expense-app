@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { db, auth } from './firebase'
 import { useAuth } from './AuthContext'
 import { useUsers } from './hooks/useUsers'
 import Login from './components/Login'
+import HomePage from './components/HomePage'
 import ExpenseForm from './components/ExpenseForm'
 import ExpenseList from './components/ExpenseList'
 import MonthlySummary from './components/MonthlySummary'
@@ -17,10 +18,24 @@ export default function App() {
   const { users, loading: usersLoading } = useUsers()
   const [expenses, setExpenses] = useState([])
   const [expensesLoading, setExpensesLoading] = useState(true)
-  const [tab, setTab] = useState('summary')
+  const [tab, setTab] = useState('home')
 
   const isAdmin = user?.email === ADMIN_EMAIL
   const isAllowed = isAdmin || users.some(u => u.email === user?.email?.toLowerCase())
+
+  // Auto-register admin in users collection on first login
+  useEffect(() => {
+    if (!user || usersLoading) return
+    const alreadyRegistered = users.some(u => u.email === user.email?.toLowerCase())
+    if (!alreadyRegistered && isAdmin) {
+      addDoc(collection(db, 'users'), {
+        email: user.email.toLowerCase(),
+        displayName: user.displayName || 'Nahuel',
+        mpAlias: '',
+        addedAt: serverTimestamp(),
+      })
+    }
+  }, [user, users, usersLoading, isAdmin])
 
   useEffect(() => {
     if (!user) return
@@ -54,13 +69,19 @@ export default function App() {
     )
   }
 
-  const peopleNames = users.map(u => u.displayName)
+  const NAV = [
+    { id: 'home',     label: 'Inicio',    icon: '⌂' },
+    { id: 'add',      label: 'Agregar',   icon: '+' },
+    { id: 'history',  label: 'Historial', icon: '☰' },
+    { id: 'expenses', label: 'Gastos',    icon: '≡' },
+    ...(isAdmin ? [{ id: 'users', label: 'Usuarios', icon: '👤' }] : []),
+  ]
 
   return (
     <div className="app">
       <header>
         <h1>Gastos Compartidos</h1>
-        <p className="subtitle">{peopleNames.join(' · ') || 'nahuel · Caro · Juli'}</p>
+        <p className="subtitle">{users.map(u => u.displayName).join(' · ') || 'nahuel · Caro · Juli'}</p>
         <div className="header-user">
           <img src={user.photoURL} alt={user.displayName} className="user-avatar" referrerPolicy="no-referrer" />
           <span className="user-name">{user.displayName}</span>
@@ -68,28 +89,34 @@ export default function App() {
         </div>
       </header>
 
+      <nav className="bottom-nav">
+        {NAV.map(n => (
+          <button
+            key={n.id}
+            className={`nav-item ${tab === n.id ? 'active' : ''}`}
+            onClick={() => setTab(n.id)}
+          >
+            <span className="nav-icon">{n.icon}</span>
+            <span className="nav-label">{n.label}</span>
+          </button>
+        ))}
+      </nav>
+
       <main>
-        <ExpenseForm user={user} users={users} />
-
-        <nav className="tabs">
-          <button className={tab === 'summary' ? 'tab active' : 'tab'} onClick={() => setTab('summary')}>
-            Resumen mensual
-          </button>
-          <button className={tab === 'list' ? 'tab active' : 'tab'} onClick={() => setTab('list')}>
-            Gastos ({expenses.length})
-          </button>
-          {isAdmin && (
-            <button className={tab === 'users' ? 'tab active' : 'tab'} onClick={() => setTab('users')}>
-              Usuarios
-            </button>
-          )}
-        </nav>
-
         {expensesLoading ? (
           <div className="loading">Cargando...</div>
-        ) : tab === 'summary' ? (
-          <MonthlySummary expenses={expenses} users={users} />
-        ) : tab === 'list' ? (
+        ) : tab === 'home' ? (
+          <HomePage
+            expenses={expenses}
+            users={users}
+            currentUserEmail={user.email}
+            onAddExpense={() => setTab('add')}
+          />
+        ) : tab === 'add' ? (
+          <ExpenseForm user={user} users={users} onAdded={() => setTab('home')} />
+        ) : tab === 'history' ? (
+          <MonthlySummary expenses={expenses} users={users} currentUserEmail={user.email} />
+        ) : tab === 'expenses' ? (
           <ExpenseList expenses={expenses} users={users} />
         ) : (
           <UserManager users={users} />

@@ -12,7 +12,7 @@ export default function Login() {
     try {
       await signInWithPopup(auth, googleProvider)
     } catch (err) {
-      setError('No se pudo iniciar sesión. Intentá de nuevo.')
+      setError(err.message || 'No se pudo iniciar sesión. Intentá de nuevo.')
     }
     setLoading(false)
   }

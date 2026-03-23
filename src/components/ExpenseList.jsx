@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
+import { getPayerDisplay } from '../utils/users'
 
 function formatMonth(ym) {
   const [year, month] = ym.split('-')
@@ -147,8 +148,8 @@ export default function ExpenseList({ expenses, users }) {
                 <tr key={exp.id}>
                   <td>{exp.name}</td>
                   <td>
-                    <span className="badge" style={getBadgeStyle(exp.payer, users)}>
-                      {exp.payer}
+                    <span className="badge" style={getBadgeStyle(getPayerDisplay(exp.payer, users), users)}>
+                      {getPayerDisplay(exp.payer, users)}
                     </span>
                   </td>
                   <td className="center">{exp.installments}</td>

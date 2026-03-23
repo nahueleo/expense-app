@@ -13,7 +13,7 @@ const emptyForm = {
   firstPaymentMonth: defaultMonth,
 }
 
-export default function ExpenseForm({ user, users }) {
+export default function ExpenseForm({ user, users, onAdded }) {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -50,6 +50,7 @@ export default function ExpenseForm({ user, users }) {
         createdBy: user?.displayName || user?.email || 'desconocido',
       })
       setForm(emptyForm)
+      onAdded?.()
     } catch (err) {
       setError('Error al guardar: ' + err.message)
     }
@@ -77,7 +78,7 @@ export default function ExpenseForm({ user, users }) {
           <select name="payer" value={form.payer} onChange={handleChange} required>
             <option value="">Seleccionar...</option>
             {users.map(u => (
-              <option key={u.id} value={u.displayName}>{u.displayName}</option>
+              <option key={u.id} value={u.email}>{u.displayName}</option>
             ))}
           </select>
         </div>

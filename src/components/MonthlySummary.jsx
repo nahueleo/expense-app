@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { getBadgeStyle } from '../utils/badges'
+import { normalizePayerKey, getPayerDisplay } from '../utils/users'
 
 function addMonths(yearMonth, n) {
   const [y, m] = yearMonth.split('-').map(Number)
@@ -25,7 +26,7 @@ function getMonthsRange(expenses) {
   return months
 }
 
-function calculateMonthlyBalances(expenses, month, people) {
+function calculateMonthlyBalances(expenses, month, people, users) {
   const balances = {}
   people.forEach(p => balances[p] = 0)
 
@@ -34,8 +35,9 @@ function calculateMonthlyBalances(expenses, month, people) {
     if (month >= exp.firstPaymentMonth && month < endMonth) {
       const installmentAmt = exp.totalAmount / exp.installments
       const share = installmentAmt / people.length
-      if (balances[exp.payer] !== undefined) {
-        balances[exp.payer] += installmentAmt
+      const payerKey = normalizePayerKey(exp.payer, users)
+      if (balances[payerKey] !== undefined) {
+        balances[payerKey] += installmentAmt
       }
       people.forEach(p => { balances[p] -= share })
     }
@@ -81,7 +83,7 @@ function getActiveExpenses(expenses, month) {
   })
 }
 
-export default function MonthlySummary({ expenses, users }) {
+export default function MonthlySummary({ expenses, users, currentUserEmail }) {
   const [expanded, setExpanded] = useState({})
 
   const people = users.length > 0
@@ -91,6 +93,9 @@ export default function MonthlySummary({ expenses, users }) {
   const mpAliases = Object.fromEntries(
     users.map(u => [u.displayName, u.mpAlias]).filter(([, alias]) => alias)
   )
+
+  // Current logged-in user's display name (for personalized view)
+  const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
 
   const months = useMemo(() => getMonthsRange(expenses), [expenses])
 
@@ -105,11 +110,17 @@ export default function MonthlySummary({ expenses, users }) {
       <h2>Resumen mensual</h2>
       <div className="months-list">
         {months.map(month => {
-          const balances = calculateMonthlyBalances(expenses, month, people)
+          const balances = calculateMonthlyBalances(expenses, month, people, users)
           const transactions = simplifyDebts(balances, people)
           const active = getActiveExpenses(expenses, month)
           const totalMonth = active.reduce((sum, exp) => sum + exp.totalAmount / exp.installments, 0)
           const isExpanded = expanded[month]
+
+          // Personalized: transactions involving the logged-in user
+          const myTransactions = myName
+            ? transactions.filter(t => t.from === myName || t.to === myName)
+            : []
+          const myBalance = myName ? balances[myName] : null
 
           return (
             <div key={month} className="month-card">
@@ -118,12 +129,54 @@ export default function MonthlySummary({ expenses, users }) {
                   <span className="month-name">{formatMonthLabel(month)}</span>
                   <span className="month-total">${formatARS(totalMonth)} total</span>
                   <span className="month-active">{active.length} gasto{active.length !== 1 ? 's' : ''}</span>
+                  {myBalance !== null && (
+                    <span className={`my-balance-pill ${myBalance >= 0 ? 'positive' : 'negative'}`}>
+                      Vos: {myBalance >= 0 ? '+' : ''}${formatARS(myBalance)}
+                    </span>
+                  )}
                 </div>
                 <span className="month-chevron">{isExpanded ? '▲' : '▼'}</span>
               </button>
 
               {isExpanded && (
                 <div className="month-body">
+
+                  {myName && myTransactions.length > 0 && (
+                    <div className="my-summary">
+                      <h4>Tu resumen</h4>
+                      {myTransactions.map((t, i) => (
+                        <div key={i} className="my-transaction">
+                          {t.from === myName ? (
+                            <>
+                              <span>Debés pagarle a</span>
+                              <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
+                              <span className="my-amount negative">-${formatARS(t.amount)}</span>
+                              {mpAliases[t.to] && (
+                                <a
+                                  href={`https://www.mercadopago.com.ar/transfer/new?alias=${mpAliases[t.to]}&amount=${Math.round(t.amount)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn-mp"
+                                >
+                                  Pagar con MP
+                                </a>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
+                              <span>te debe</span>
+                              <span className="my-amount positive">+${formatARS(t.amount)}</span>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      {myBalance !== null && myTransactions.length === 0 && (
+                        <div className="no-debts">No tenes deudas este mes</div>
+                      )}
+                    </div>
+                  )}
+
                   {transactions.length === 0 ? (
                     <div className="no-debts">Sin deudas este mes</div>
                   ) : (
@@ -154,8 +207,9 @@ export default function MonthlySummary({ expenses, users }) {
                   <div className="balances">
                     <h4>Balance neto:</h4>
                     {people.map(person => (
-                      <div key={person} className="balance-row">
+                      <div key={person} className={`balance-row ${person === myName ? 'balance-row-me' : ''}`}>
                         <span className="badge" style={getBadgeStyle(person, users)}>{person}</span>
+                        {person === myName && <span className="me-label">vos</span>}
                         <span className={`balance-amount ${balances[person] >= 0 ? 'positive' : 'negative'}`}>
                           {balances[person] >= 0 ? '+' : ''}${formatARS(balances[person])}
                         </span>
@@ -168,7 +222,9 @@ export default function MonthlySummary({ expenses, users }) {
                     {active.map(exp => (
                       <div key={exp.id} className="active-expense-row">
                         <span>{exp.name}</span>
-                        <span className="badge" style={getBadgeStyle(exp.payer, users)}>{exp.payer}</span>
+                        <span className="badge" style={getBadgeStyle(getPayerDisplay(exp.payer, users), users)}>
+                          {getPayerDisplay(exp.payer, users)}
+                        </span>
                         <span className="right">${formatARS(exp.totalAmount / exp.installments)}/mes</span>
                       </div>
                     ))}

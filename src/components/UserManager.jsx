@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { collection, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 
@@ -9,6 +9,8 @@ export default function UserManager({ users }) {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({})
 
   function handleChange(e) {
     const { name, value } = e.target
@@ -40,6 +42,20 @@ export default function UserManager({ users }) {
   async function handleRemove(id, name) {
     if (!window.confirm(`Eliminar usuario "${name}"?`)) return
     await deleteDoc(doc(db, 'users', id))
+    if (editingId === id) setEditingId(null)
+  }
+
+  function startEdit(u) {
+    setEditingId(u.id)
+    setEditForm({ displayName: u.displayName, mpAlias: u.mpAlias || '' })
+  }
+
+  async function handleSaveEdit(id) {
+    await updateDoc(doc(db, 'users', id), {
+      displayName: editForm.displayName.trim(),
+      mpAlias: editForm.mpAlias.trim(),
+    })
+    setEditingId(null)
   }
 
   return (
@@ -52,14 +68,42 @@ export default function UserManager({ users }) {
         )}
         {users.map(u => (
           <div key={u.id} className="user-row">
-            <span className="badge" style={getBadgeStyle(u.displayName, users)}>
-              {u.displayName}
-            </span>
-            <div className="user-details">
-              <span className="user-email">{u.email}</span>
-              {u.mpAlias && <span className="user-mp-alias">MP: {u.mpAlias}</span>}
-            </div>
-            <button className="btn-delete" onClick={() => handleRemove(u.id, u.displayName)}>x</button>
+            {editingId === u.id ? (
+              <>
+                <input
+                  className="edit-input"
+                  value={editForm.displayName}
+                  onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
+                  placeholder="Nombre"
+                  style={{ width: 100 }}
+                />
+                <input
+                  className="edit-input"
+                  value={editForm.mpAlias}
+                  onChange={e => setEditForm(f => ({ ...f, mpAlias: e.target.value }))}
+                  placeholder="alias.mp"
+                  style={{ flex: 1 }}
+                />
+                <span className="user-email" style={{ fontSize: 12 }}>{u.email}</span>
+                <button className="btn-save" onClick={() => handleSaveEdit(u.id)}>OK</button>
+                <button className="btn-cancel" onClick={() => setEditingId(null)}>✕</button>
+              </>
+            ) : (
+              <>
+                <span className="badge" style={getBadgeStyle(u.displayName, users)}>
+                  {u.displayName}
+                </span>
+                <div className="user-details">
+                  <span className="user-email">{u.email}</span>
+                  {u.mpAlias
+                    ? <span className="user-mp-alias">MP: {u.mpAlias}</span>
+                    : <span className="user-mp-alias" style={{ color: '#aaa' }}>Sin alias MP</span>
+                  }
+                </div>
+                <button className="btn-edit" onClick={() => startEdit(u)} title="Editar">✎</button>
+                <button className="btn-delete" onClick={() => handleRemove(u.id, u.displayName)}>x</button>
+              </>
+            )}
           </div>
         ))}
       </div>
