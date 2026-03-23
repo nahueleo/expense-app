@@ -28,10 +28,16 @@ export default function ExpenseList({ expenses, users }) {
   }
 
   function startEdit(exp) {
+    // Normalize payer to email (legacy expenses stored displayName)
+    let payerEmail = exp.payer
+    if (exp.payer && !exp.payer.includes('@')) {
+      const found = users.find(u => u.displayName === exp.payer)
+      if (found) payerEmail = found.email
+    }
     setEditingId(exp.id)
     setEditForm({
       name: exp.name,
-      payer: exp.payer,
+      payer: payerEmail,
       installments: exp.installments,
       totalAmount: exp.totalAmount,
       firstPaymentMonth: exp.firstPaymentMonth,
@@ -99,7 +105,7 @@ export default function ExpenseList({ expenses, users }) {
                     <td>
                       <select name="payer" value={editForm.payer} onChange={handleEditChange} className="edit-input">
                         {users.map(u => (
-                          <option key={u.id} value={u.displayName}>{u.displayName}</option>
+                          <option key={u.id} value={u.email}>{u.displayName}</option>
                         ))}
                       </select>
                     </td>

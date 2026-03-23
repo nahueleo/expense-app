@@ -1,6 +1,8 @@
-import { signInWithPopup } from 'firebase/auth'
+import { signInWithPopup, signInWithRedirect } from 'firebase/auth'
 import { auth, googleProvider } from '../firebase'
 import { useState } from 'react'
+
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
 
 export default function Login() {
   const [loading, setLoading] = useState(false)
@@ -10,11 +12,15 @@ export default function Login() {
     setLoading(true)
     setError('')
     try {
-      await signInWithPopup(auth, googleProvider)
+      if (isMobile) {
+        await signInWithRedirect(auth, googleProvider)
+      } else {
+        await signInWithPopup(auth, googleProvider)
+      }
     } catch (err) {
       setError(err.message || 'No se pudo iniciar sesión. Intentá de nuevo.')
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
