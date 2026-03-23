@@ -5,7 +5,6 @@ import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 import { formatARS } from '../utils/format'
 import { formatMonthLabel, getCurrentMonth } from '../utils/dates'
-import { buildMpLink, buildModoLink } from '../utils/paymentLinks'
 
 export default function PaymentModal({ transaction, toUser, activityId, fromName, users, onClose, initialMonth }) {
   const forMonth = initialMonth || getCurrentMonth()
@@ -42,6 +41,11 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
     })
   }
 
+  async function openApp(alias, scheme) {
+    try { await navigator.clipboard.writeText(alias) } catch (_) {}
+    window.location.href = scheme
+  }
+
   return createPortal(
     <div className="sheet-overlay" onClick={onClose}>
       <div className="sheet payment-sheet" onClick={e => e.stopPropagation()}>
@@ -72,16 +76,14 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
             </div>
             <div className="alias-actions">
               <button className="btn-copy" onClick={() => copyToClipboard(toUser.mpAlias, 'mp')}>
-                {copied === 'mp' ? '✓' : 'Copiar'}
+                {copied === 'mp' ? '✓ Copiado' : 'Copiar alias'}
               </button>
-              <a
-                href={buildMpLink(toUser.mpAlias, transaction.amount)}
+              <button
                 className="btn-open-app btn-open-mp"
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={() => openApp(toUser.mpAlias, 'mercadopago://')}
               >
                 Abrir MP
-              </a>
+              </button>
             </div>
           </div>
         )}
@@ -94,16 +96,14 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
             </div>
             <div className="alias-actions">
               <button className="btn-copy" onClick={() => copyToClipboard(toUser.modoAlias, 'modo')}>
-                {copied === 'modo' ? '✓' : 'Copiar'}
+                {copied === 'modo' ? '✓ Copiado' : 'Copiar alias'}
               </button>
-              <a
-                href={buildModoLink(toUser.modoAlias, transaction.amount)}
+              <button
                 className="btn-open-app btn-open-modo"
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={() => openApp(toUser.modoAlias, 'modo://')}
               >
                 Abrir MODO
-              </a>
+              </button>
             </div>
           </div>
         )}
