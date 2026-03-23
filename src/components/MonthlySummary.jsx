@@ -93,6 +93,9 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
   const mpAliases = Object.fromEntries(
     users.map(u => [u.displayName, u.mpAlias]).filter(([, alias]) => alias)
   )
+  const modoAliases = Object.fromEntries(
+    users.map(u => [u.displayName, u.modoAlias || u.email]).filter(([, alias]) => alias)
+  )
 
   // Current logged-in user's display name (for personalized view)
   const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
@@ -151,16 +154,24 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                               <span>Debés pagarle a</span>
                               <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                               <span className="my-amount negative">-${formatARS(t.amount)}</span>
-                              {mpAliases[t.to] && (
-                                <a
-                                  href={`https://link.mercadopago.com.ar/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn-mp"
-                                >
-                                  Pagar con MP
-                                </a>
-                              )}
+                              <div className="pay-buttons">
+                                {mpAliases[t.to] && (
+                                  <a
+                                    href={`mercadopago://payments/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn-pay btn-pay-mp"
+                                  >MP</a>
+                                )}
+                                {modoAliases[t.to] && (
+                                  <a
+                                    href={`https://www.modo.com.ar/pagar?amount=${Math.round(t.amount)}&alias=${modoAliases[t.to]}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn-pay btn-pay-modo"
+                                  >MODO</a>
+                                )}
+                              </div>
                             </>
                           ) : (
                             <>
@@ -188,17 +199,24 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                           <span className="arrow"> le debe </span>
                           <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                           <span className="amount">${formatARS(t.amount)}</span>
-                          {mpAliases[t.to] && (
-                            <a
-                              href={`https://link.mercadopago.com.ar/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn-mp"
-                              title={`Pagar a ${t.to} (alias: ${mpAliases[t.to]})`}
-                            >
-                              Pagar con MP
-                            </a>
-                          )}
+                          <div className="pay-buttons">
+                            {mpAliases[t.to] && (
+                              <a
+                                href={`mercadopago://payments/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-pay btn-pay-mp"
+                              >MP</a>
+                            )}
+                            {modoAliases[t.to] && (
+                              <a
+                                href={`https://www.modo.com.ar/pagar?amount=${Math.round(t.amount)}&alias=${modoAliases[t.to]}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-pay btn-pay-modo"
+                              >MODO</a>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
