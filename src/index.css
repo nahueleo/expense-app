@@ -424,6 +424,43 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
   margin-left: auto;
 }
 
+.pay-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  transition: background 0.15s;
+  color: white;
+}
+
+.btn-pay-mp {
+  background: #009ee3;
+}
+
+.btn-pay-mp:hover {
+  background: #0082c0;
+}
+
+.btn-pay-modo {
+  background: #6b21a8;
+}
+
+.btn-pay-modo:hover {
+  background: #581c87;
+}
+
+/* keep old class for MonthlySummary compatibility */
 .btn-mp {
   display: inline-block;
   background: #009ee3;

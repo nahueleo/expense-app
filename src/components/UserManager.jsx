@@ -4,7 +4,7 @@ import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from '
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 
-const emptyForm = { email: '', displayName: '', mpAlias: '' }
+const emptyForm = { email: '', displayName: '', mpAlias: '', modoAlias: '' }
 
 export default function UserManager({ users, currentUserDoc }) {
   const [form, setForm] = useState(emptyForm)
@@ -31,6 +31,7 @@ export default function UserManager({ users, currentUserDoc }) {
         email: form.email.trim().toLowerCase(),
         displayName: form.displayName.trim(),
         mpAlias: form.mpAlias.trim(),
+        modoAlias: form.modoAlias.trim(),
         addedAt: serverTimestamp(),
       })
       setForm(emptyForm)
@@ -54,13 +55,14 @@ export default function UserManager({ users, currentUserDoc }) {
 
   function startEdit(u) {
     setEditingId(u.id)
-    setEditForm({ displayName: u.displayName, mpAlias: u.mpAlias || '' })
+    setEditForm({ displayName: u.displayName, mpAlias: u.mpAlias || '', modoAlias: u.modoAlias || '' })
   }
 
   async function handleSaveEdit(id) {
     await updateDoc(doc(db, 'users', id), {
       displayName: editForm.displayName.trim(),
       mpAlias: editForm.mpAlias.trim(),
+      modoAlias: editForm.modoAlias.trim(),
     })
     setEditingId(null)
   }
@@ -91,6 +93,13 @@ export default function UserManager({ users, currentUserDoc }) {
                   placeholder="alias.mp"
                   style={{ flex: 1 }}
                 />
+                <input
+                  className="edit-input"
+                  value={editForm.modoAlias}
+                  onChange={e => setEditForm(f => ({ ...f, modoAlias: e.target.value }))}
+                  placeholder="alias.modo"
+                  style={{ flex: 1 }}
+                />
                 <span className="user-email" style={{ fontSize: 12 }}>{u.email}</span>
                 <button className="btn-save" onClick={() => handleSaveEdit(u.id)}>OK</button>
                 <button className="btn-cancel" onClick={() => setEditingId(null)}>✕</button>
@@ -105,6 +114,10 @@ export default function UserManager({ users, currentUserDoc }) {
                   {u.mpAlias
                     ? <span className="user-mp-alias">MP: {u.mpAlias}</span>
                     : <span className="user-mp-alias" style={{ color: '#aaa' }}>Sin alias MP</span>
+                  }
+                  {u.modoAlias
+                    ? <span className="user-mp-alias">MODO: {u.modoAlias}</span>
+                    : <span className="user-mp-alias" style={{ color: '#aaa' }}>Sin alias MODO</span>
                   }
                 </div>
                 <button
@@ -152,6 +165,15 @@ export default function UserManager({ users, currentUserDoc }) {
               value={form.mpAlias}
               onChange={handleChange}
               placeholder="caro.mp"
+            />
+          </div>
+          <div className="form-group">
+            <label>Alias MODO</label>
+            <input
+              name="modoAlias"
+              value={form.modoAlias}
+              onChange={handleChange}
+              placeholder="caro.modo"
             />
           </div>
         </div>

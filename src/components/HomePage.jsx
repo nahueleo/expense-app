@@ -88,6 +88,9 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
   const mpAliases = Object.fromEntries(
     users.map(u => [u.displayName, u.mpAlias]).filter(([, alias]) => alias)
   )
+  const modoAliases = Object.fromEntries(
+    users.map(u => [u.displayName, u.modoAlias]).filter(([, alias]) => alias)
+  )
 
   const active = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
   const balances = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
@@ -163,16 +166,30 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                   </div>
                   <div className="transaction-right">
                     <span className="transaction-amount negative">${formatARS(t.amount)}</span>
-                    {mpAliases[t.to] && (
-                      <a
-                        href={`https://link.mercadopago.com.ar/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn-mp"
-                      >
-                        Pagar con MP
-                      </a>
-                    )}
+                    <div className="pay-buttons">
+                      {mpAliases[t.to] && (
+                        <a
+                          href={`mercadopago://payments/transfer/checkout?amount=${Math.round(t.amount)}&receiver=${mpAliases[t.to]}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-pay btn-pay-mp"
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                          MP
+                        </a>
+                      )}
+                      {modoAliases[t.to] && (
+                        <a
+                          href={`https://www.modo.com.ar/pagar?amount=${Math.round(t.amount)}&alias=${modoAliases[t.to]}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-pay btn-pay-modo"
+                        >
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
+                          MODO
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
