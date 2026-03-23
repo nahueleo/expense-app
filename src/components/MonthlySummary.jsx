@@ -1,127 +1,37 @@
 import { useMemo, useState } from 'react'
 import { getBadgeStyle } from '../utils/badges'
-import { normalizePayerKey, getPayerDisplay } from '../utils/users'
+import { getPayerDisplay } from '../utils/users'
+import { getMonthsRange, formatMonthLabel } from '../utils/dates'
+import { formatARS } from '../utils/format'
+import { getActiveExpenses, calculateBalances, simplifyDebts } from '../utils/finance'
 import PayButtons from './PayButtons'
-
-function addMonths(yearMonth, n) {
-  const [y, m] = yearMonth.split('-').map(Number)
-  const date = new Date(y, m - 1 + n, 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
-
-function getMonthsRange(expenses) {
-  if (expenses.length === 0) return []
-  let min = expenses[0].firstPaymentMonth
-  let max = expenses[0].firstPaymentMonth
-  expenses.forEach(exp => {
-    if (exp.firstPaymentMonth < min) min = exp.firstPaymentMonth
-    const end = addMonths(exp.firstPaymentMonth, exp.installments - 1)
-    if (end > max) max = end
-  })
-  const months = []
-  let current = min
-  while (current <= max) {
-    months.push(current)
-    current = addMonths(current, 1)
-  }
-  return months
-}
-
-function calculateMonthlyBalances(expenses, month, people, users) {
-  const balances = {}
-  people.forEach(p => balances[p] = 0)
-
-  expenses.forEach(exp => {
-    const endMonth = addMonths(exp.firstPaymentMonth, exp.installments)
-    if (month >= exp.firstPaymentMonth && month < endMonth) {
-      const installmentAmt = exp.totalAmount / exp.installments
-      const share = installmentAmt / people.length
-      const payerKey = normalizePayerKey(exp.payer, users)
-      if (balances[payerKey] !== undefined) {
-        balances[payerKey] += installmentAmt
-      }
-      people.forEach(p => { balances[p] -= share })
-    }
-  })
-
-  return balances
-}
-
-function simplifyDebts(balances, people) {
-  const entries = people.map(name => ({ name, bal: balances[name] }))
-  const transactions = []
-
-  for (let iter = 0; iter < 20; iter++) {
-    entries.sort((a, b) => a.bal - b.bal)
-    const debtor = entries[0]
-    const creditor = entries[entries.length - 1]
-    if (Math.abs(debtor.bal) < 0.5 || Math.abs(creditor.bal) < 0.5) break
-    const amount = Math.min(Math.abs(debtor.bal), creditor.bal)
-    if (amount < 0.5) break
-    transactions.push({ from: debtor.name, to: creditor.name, amount })
-    debtor.bal += amount
-    creditor.bal -= amount
-  }
-
-  return transactions
-}
-
-function formatARS(n) {
-  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
-function formatMonthLabel(ym) {
-  const [year, month] = ym.split('-')
-  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  return `${months[parseInt(month) - 1]} ${year}`
-}
-
-function getActiveExpenses(expenses, month) {
-  return expenses.filter(exp => {
-    const endMonth = addMonths(exp.firstPaymentMonth, exp.installments)
-    return month >= exp.firstPaymentMonth && month < endMonth
-  })
-}
 
 export default function MonthlySummary({ expenses, users, currentUserEmail }) {
   const [expanded, setExpanded] = useState({})
 
-  const people = users.map(u => u.displayName)
-
+  const people     = users.map(u => u.displayName)
+  const myName     = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
   const userByName = Object.fromEntries(users.map(u => [u.displayName, u]))
+  const months     = useMemo(() => getMonthsRange(expenses), [expenses])
 
-  // Current logged-in user's display name (for personalized view)
-  const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
-
-  const months = useMemo(() => getMonthsRange(expenses), [expenses])
-
-  if (expenses.length === 0) return null
-
-  function toggleMonth(m) {
-    setExpanded(e => ({ ...e, [m]: !e[m] }))
-  }
+  if (!expenses.length) return null
 
   return (
     <div className="monthly-summary">
-      <h2>Resumen mensual</h2>
+      <h2>Historial mensual</h2>
       <div className="months-list">
         {months.map(month => {
-          const balances = calculateMonthlyBalances(expenses, month, people, users)
+          const active       = getActiveExpenses(expenses, month)
+          const balances     = calculateBalances(expenses, month, people, users)
           const transactions = simplifyDebts(balances, people)
-          const active = getActiveExpenses(expenses, month)
-          const totalMonth = active.reduce((sum, exp) => sum + exp.totalAmount / exp.installments, 0)
-          const isExpanded = expanded[month]
-
-          // Personalized: transactions involving the logged-in user
-          const myTransactions = myName
-            ? transactions.filter(t => t.from === myName || t.to === myName)
-            : []
-          const myBalance = myName ? balances[myName] : null
+          const totalMonth   = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
+          const myBalance    = myName != null ? balances[myName] : null
+          const myTxs        = myName ? transactions.filter(t => t.from === myName || t.to === myName) : []
+          const isExpanded   = expanded[month]
 
           return (
             <div key={month} className="month-card">
-              <button className="month-header" onClick={() => toggleMonth(month)}>
+              <button className="month-header" onClick={() => setExpanded(e => ({ ...e, [month]: !e[month] }))}>
                 <div className="month-title">
                   <span className="month-name">{formatMonthLabel(month)}</span>
                   <span className="month-total">${formatARS(totalMonth)} total</span>
@@ -138,10 +48,11 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
               {isExpanded && (
                 <div className="month-body">
 
-                  {myName && myTransactions.length > 0 && (
+                  {/* My summary */}
+                  {myName && myTxs.length > 0 && (
                     <div className="my-summary">
                       <h4>Tu resumen</h4>
-                      {myTransactions.map((t, i) => (
+                      {myTxs.map((t, i) => (
                         <div key={i} className="my-transaction">
                           {t.from === myName ? (
                             <>
@@ -159,17 +70,15 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                           )}
                         </div>
                       ))}
-                      {myBalance !== null && myTransactions.length === 0 && (
-                        <div className="no-debts">No tenes deudas este mes</div>
-                      )}
                     </div>
                   )}
 
+                  {/* All transactions */}
                   {transactions.length === 0 ? (
                     <div className="no-debts">Sin deudas este mes</div>
                   ) : (
                     <div className="transactions">
-                      <h4>Quien le debe a quien:</h4>
+                      <h4>Quien le debe a quien</h4>
                       {transactions.map((t, i) => (
                         <div key={i} className="transaction">
                           <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
@@ -182,8 +91,9 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                     </div>
                   )}
 
+                  {/* Net balances */}
                   <div className="balances">
-                    <h4>Balance neto:</h4>
+                    <h4>Balance neto</h4>
                     {people.map(person => (
                       <div key={person} className={`balance-row ${person === myName ? 'balance-row-me' : ''}`}>
                         <span className="badge" style={getBadgeStyle(person, users)}>{person}</span>
@@ -195,8 +105,9 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                     ))}
                   </div>
 
+                  {/* Active expenses */}
                   <div className="active-expenses">
-                    <h4>Gastos activos:</h4>
+                    <h4>Gastos activos</h4>
                     {active.map(exp => (
                       <div key={exp.id} className="active-expense-row">
                         <span>{exp.name}</span>
@@ -207,6 +118,7 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                       </div>
                     ))}
                   </div>
+
                 </div>
               )}
             </div>

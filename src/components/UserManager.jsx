@@ -14,7 +14,7 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const isActivityAdmin = currentActivity?.admins?.includes(currentUserDoc?.email)
+  const isActivityAdmin = currentActivity?.admins?.includes(currentUserDoc?.email?.toLowerCase())
   const isAppAdmin = currentUserDoc?.isAdmin === true
 
   // Members of current activity — if no activity, show all users

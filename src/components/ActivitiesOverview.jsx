@@ -1,52 +1,22 @@
 import { getBadgeStyle } from '../utils/badges'
-
-function formatARS(n) {
-  return n.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
-function addMonths(ym, n) {
-  const [y, m] = ym.split('-').map(Number)
-  const d = new Date(y, m - 1 + n, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function getCurrentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-function formatMonthLabel(ym) {
-  if (!ym) return null
-  const [year, month] = ym.split('-')
-  const months = ['Ene','Feb','Mar','Abr','May','Jun',
-                  'Jul','Ago','Sep','Oct','Nov','Dic']
-  return `${months[parseInt(month) - 1]} ${year}`
-}
+import { addMonths, getCurrentMonth, formatMonthShort } from '../utils/dates'
+import { formatARS } from '../utils/format'
+import { getPaidInstallments } from '../utils/finance'
 
 function getActivityStats(activityId, expenses) {
-  const actExpenses = expenses.filter(e => e.activityId === activityId)
-  const total = actExpenses.reduce((s, e) => s + e.totalAmount, 0)
+  const actExp = expenses.filter(e => e.activityId === activityId)
+  if (!actExp.length) return { count: 0, total: 0, paid: 0, lastPaymentMonth: null, done: false }
 
-  // Last payment month across all expenses
-  const lastPaymentMonth = actExpenses.reduce((max, e) => {
+  const currentMonth = getCurrentMonth()
+  const total = actExp.reduce((s, e) => s + e.totalAmount, 0)
+  const paid  = actExp.reduce((s, e) => s + getPaidInstallments(e, currentMonth) * (e.totalAmount / e.installments), 0)
+  const lastPaymentMonth = actExp.reduce((max, e) => {
     const last = addMonths(e.firstPaymentMonth, e.installments - 1)
     return last > max ? last : max
   }, '')
 
-  // Progress: paid vs total
-  const currentMonth = getCurrentMonth()
-  const paid = actExpenses.reduce((s, e) => {
-    if (currentMonth < e.firstPaymentMonth) return s
-    const monthsPaid = Math.min(
-      e.installments,
-      (parseInt(currentMonth.split('-')[0]) - parseInt(e.firstPaymentMonth.split('-')[0])) * 12 +
-      (parseInt(currentMonth.split('-')[1]) - parseInt(e.firstPaymentMonth.split('-')[1])) + 1
-    )
-    return s + (monthsPaid / e.installments) * e.totalAmount
-  }, 0)
-
   return {
-    count: actExpenses.length,
+    count: actExp.length,
     total,
     paid,
     lastPaymentMonth,
@@ -55,7 +25,7 @@ function getActivityStats(activityId, expenses) {
 }
 
 export default function ActivitiesOverview({ activities, expenses, users, onSelect, onCreateNew, currentUserEmail }) {
-  if (activities.length === 0) {
+  if (!activities.length) {
     return (
       <div className="activities-empty">
         <div className="activities-empty-icon">🌍</div>
@@ -73,16 +43,12 @@ export default function ActivitiesOverview({ activities, expenses, users, onSele
       <h2 className="activities-title">Mis actividades</h2>
       <div className="activities-grid">
         {activities.map(activity => {
-          const stats = getActivityStats(activity.id, expenses)
-          const isAdmin = activity.admins?.includes(currentUserEmail)
+          const stats       = getActivityStats(activity.id, expenses)
+          const isAdmin     = activity.admins?.includes(currentUserEmail?.toLowerCase())
           const memberUsers = users.filter(u => activity.members?.includes(u.email))
 
           return (
-            <button
-              key={activity.id}
-              className="activity-card"
-              onClick={() => onSelect(activity.id)}
-            >
+            <button key={activity.id} className="activity-card" onClick={() => onSelect(activity.id)}>
               <div className="activity-card-header">
                 <span className="activity-card-emoji">{activity.emoji}</span>
                 <div className="activity-card-badges">
@@ -114,11 +80,11 @@ export default function ActivitiesOverview({ activities, expenses, users, onSele
                   <div className="activity-progress-bar">
                     <div
                       className="activity-progress-fill"
-                      style={{ width: `${Math.min(100, stats.total > 0 ? (stats.paid / stats.total) * 100 : 0)}%` }}
+                      style={{ width: `${Math.min(100, (stats.paid / stats.total) * 100)}%` }}
                     />
                   </div>
                   <span className="activity-progress-pct">
-                    {stats.total > 0 ? Math.round((stats.paid / stats.total) * 100) : 0}%
+                    {Math.round((stats.paid / stats.total) * 100)}%
                   </span>
                 </div>
               )}
@@ -140,7 +106,7 @@ export default function ActivitiesOverview({ activities, expenses, users, onSele
                     </>
                   ) : stats.lastPaymentMonth ? (
                     <>
-                      <span className="activity-stat-value" style={{ fontSize: 13 }}>{formatMonthLabel(stats.lastPaymentMonth)}</span>
+                      <span className="activity-stat-value" style={{ fontSize: 13 }}>{formatMonthShort(stats.lastPaymentMonth)}</span>
                       <span className="activity-stat-label">último pago</span>
                     </>
                   ) : (
@@ -155,7 +121,6 @@ export default function ActivitiesOverview({ activities, expenses, users, onSele
           )
         })}
 
-        {/* New activity card */}
         <button className="activity-card activity-card-new" onClick={onCreateNew}>
           <span className="activity-card-new-icon">+</span>
           <span className="activity-card-new-label">Nueva actividad</span>

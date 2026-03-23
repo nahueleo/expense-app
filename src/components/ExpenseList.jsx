@@ -3,94 +3,42 @@ import { doc, deleteDoc, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 import { getPayerDisplay } from '../utils/users'
-
-function getCurrentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-function addMonths(ym, n) {
-  const [y, m] = ym.split('-').map(Number)
-  const d = new Date(y, m - 1 + n, 1)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-}
-
-function monthDiff(from, to) {
-  const [fy, fm] = from.split('-').map(Number)
-  const [ty, tm] = to.split('-').map(Number)
-  return (ty - fy) * 12 + (tm - fm)
-}
-
-function formatMonthLabel(ym) {
-  const [year, month] = ym.split('-')
-  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-  return `${months[parseInt(month) - 1]} ${year}`
-}
-
-function formatARS(n) {
-  return Math.abs(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
-function getPaidInstallments(exp, currentMonth) {
-  if (currentMonth < exp.firstPaymentMonth) return 0
-  return Math.min(exp.installments, monthDiff(exp.firstPaymentMonth, currentMonth) + 1)
-}
-
-function getExpenseStatus(exp, currentMonth) {
-  const lastMonth = addMonths(exp.firstPaymentMonth, exp.installments - 1)
-  if (currentMonth > lastMonth) return 'finished'
-  if (currentMonth < exp.firstPaymentMonth) return 'pending'
-  return 'active'
-}
+import { addMonths, getCurrentMonth, formatMonthShort } from '../utils/dates'
+import { formatARS } from '../utils/format'
+import { getPaidInstallments, getExpenseStatus } from '../utils/finance'
 
 export default function ExpenseList({ expenses, users }) {
   const [editingId, setEditingId] = useState(null)
-  const [editForm, setEditForm] = useState({})
-  const [saving, setSaving] = useState(false)
+  const [editForm, setEditForm]   = useState({})
+  const [saving, setSaving]       = useState(false)
 
   const currentMonth = getCurrentMonth()
-  const n = users.length || 3
+  const n = users.length || 1
 
-  // ── Global stats ──
-  const totalAmount = expenses.reduce((s, e) => s + e.totalAmount, 0)
-  const totalPaid = expenses.reduce((s, e) => {
-    const paid = getPaidInstallments(e, currentMonth)
-    return s + paid * (e.totalAmount / e.installments)
-  }, 0)
+  const totalAmount    = expenses.reduce((s, e) => s + e.totalAmount, 0)
+  const totalPaid      = expenses.reduce((s, e) => s + getPaidInstallments(e, currentMonth) * (e.totalAmount / e.installments), 0)
   const totalRemaining = totalAmount - totalPaid
-  const lastPaymentMonth = expenses.reduce((max, e) => {
+  const lastPayMonth   = expenses.reduce((max, e) => {
     const last = addMonths(e.firstPaymentMonth, e.installments - 1)
     return last > max ? last : max
   }, '')
-  const activeCount = expenses.filter(e => getExpenseStatus(e, currentMonth) === 'active').length
+  const activeCount   = expenses.filter(e => getExpenseStatus(e, currentMonth) === 'active').length
   const finishedCount = expenses.filter(e => getExpenseStatus(e, currentMonth) === 'finished').length
-  const monthsLeft = lastPaymentMonth ? Math.max(0, monthDiff(currentMonth, lastPaymentMonth)) : 0
+  const monthsLeft    = lastPayMonth ? Math.max(0, (parseInt(lastPayMonth.split('-')[0]) - parseInt(currentMonth.split('-')[0])) * 12 + (parseInt(lastPayMonth.split('-')[1]) - parseInt(currentMonth.split('-')[1]))) : 0
 
-  // ── Edit handlers ──
   async function handleDelete(id, name) {
     if (!window.confirm(`Eliminar "${name}"?`)) return
     await deleteDoc(doc(db, 'expenses', id))
   }
 
   function startEdit(exp) {
-    let payerEmail = exp.payer
-    if (exp.payer && !exp.payer.includes('@')) {
-      const found = users.find(u => u.displayName === exp.payer)
-      if (found) payerEmail = found.email
+    let payer = exp.payer
+    if (payer && !payer.includes('@')) {
+      const found = users.find(u => u.displayName === payer)
+      if (found) payer = found.email
     }
     setEditingId(exp.id)
-    setEditForm({
-      name: exp.name,
-      payer: payerEmail,
-      installments: exp.installments,
-      totalAmount: exp.totalAmount,
-      firstPaymentMonth: exp.firstPaymentMonth,
-    })
-  }
-
-  function handleEditChange(e) {
-    const { name, value } = e.target
-    setEditForm(f => ({ ...f, [name]: value }))
+    setEditForm({ name: exp.name, payer, installments: exp.installments, totalAmount: exp.totalAmount, firstPaymentMonth: exp.firstPaymentMonth })
   }
 
   async function handleSave() {
@@ -106,22 +54,20 @@ export default function ExpenseList({ expenses, users }) {
     setEditingId(null)
   }
 
-  if (expenses.length === 0) {
-    return <div className="empty">No hay gastos cargados todavia.</div>
-  }
+  if (!expenses.length) return <div className="empty">No hay gastos cargados todavia.</div>
 
   return (
     <div className="expense-list-v2">
 
-      {/* ── Summary stats ── */}
+      {/* Summary stats */}
       <div className="exp-stats-grid">
         <div className="exp-stat">
           <div className="exp-stat-value">${formatARS(totalAmount)}</div>
-          <div className="exp-stat-label">Total comprometido</div>
+          <div className="exp-stat-label">Total</div>
         </div>
         <div className="exp-stat">
           <div className="exp-stat-value green">${formatARS(totalPaid)}</div>
-          <div className="exp-stat-label">Ya pagado</div>
+          <div className="exp-stat-label">Pagado</div>
         </div>
         <div className="exp-stat">
           <div className="exp-stat-value red">${formatARS(totalRemaining)}</div>
@@ -129,7 +75,7 @@ export default function ExpenseList({ expenses, users }) {
         </div>
       </div>
 
-      <div className="exp-stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+      <div className="exp-stats-grid">
         <div className="exp-stat">
           <div className="exp-stat-value">{activeCount}</div>
           <div className="exp-stat-label">Activos</div>
@@ -140,63 +86,54 @@ export default function ExpenseList({ expenses, users }) {
         </div>
         <div className="exp-stat">
           <div className="exp-stat-value">{monthsLeft === 0 ? '✓' : `${monthsLeft}m`}</div>
-          <div className="exp-stat-label">
-            {monthsLeft === 0 ? 'Todo pago' : `Hasta ${formatMonthLabel(lastPaymentMonth)}`}
-          </div>
+          <div className="exp-stat-label">{monthsLeft === 0 ? 'Todo pago' : `Hasta ${formatMonthShort(lastPayMonth)}`}</div>
         </div>
       </div>
 
-      {/* Overall progress bar */}
       <div className="exp-overall-progress">
         <div className="exp-overall-bar">
-          <div
-            className="exp-overall-fill"
-            style={{ width: `${totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0}%` }}
-          />
+          <div className="exp-overall-fill" style={{ width: `${totalAmount > 0 ? (totalPaid / totalAmount) * 100 : 0}%` }} />
         </div>
-        <span className="exp-overall-pct">
-          {totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0}% pagado
-        </span>
+        <span className="exp-overall-pct">{totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0}% pagado</span>
       </div>
 
-      {/* ── Expense cards ── */}
+      {/* Expense cards */}
       <div className="exp-cards">
         {expenses.map(exp => {
+          const status         = getExpenseStatus(exp, currentMonth)
           const installmentAmt = exp.totalAmount / exp.installments
+          const paidCount      = getPaidInstallments(exp, currentMonth)
+          const paidAmount     = paidCount * installmentAmt
+          const pct            = Math.round((paidCount / exp.installments) * 100)
+          const lastMonth      = addMonths(exp.firstPaymentMonth, exp.installments - 1)
+          const payerName      = getPayerDisplay(exp.payer, users)
           const sharePerPerson = installmentAmt / n
-          const paidInstallments = getPaidInstallments(exp, currentMonth)
-          const paidAmount = paidInstallments * installmentAmt
-          const remainingAmt = exp.totalAmount - paidAmount
-          const pct = Math.round((paidInstallments / exp.installments) * 100)
-          const lastMonth = addMonths(exp.firstPaymentMonth, exp.installments - 1)
-          const status = getExpenseStatus(exp, currentMonth)
-          const payerName = getPayerDisplay(exp.payer, users)
 
           if (editingId === exp.id) {
             return (
               <div key={exp.id} className="exp-card editing">
                 <div className="exp-edit-grid">
                   <div className="form-group">
-                    <label>Descripcion</label>
-                    <input name="name" value={editForm.name} onChange={handleEditChange} className="edit-input" />
+                    <label>Descripción</label>
+                    <input name="name" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="edit-input" />
                   </div>
                   <div className="form-group">
-                    <label>Quien pago</label>
-                    <select name="payer" value={editForm.payer} onChange={handleEditChange} className="edit-input">
+                    <label>Quien pagó</label>
+                    <select name="payer" value={editForm.payer} onChange={e => setEditForm(f => ({ ...f, payer: e.target.value }))} className="edit-input">
                       {users.map(u => <option key={u.id} value={u.email}>{u.displayName}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
                     <label>Total ($)</label>
-                    <input name="totalAmount" type="number" value={editForm.totalAmount} onChange={handleEditChange} className="edit-input" />
+                    <input name="totalAmount" type="number" value={editForm.totalAmount} onChange={e => setEditForm(f => ({ ...f, totalAmount: e.target.value }))} className="edit-input" />
                   </div>
                   <div className="form-group">
                     <label>Cuotas</label>
-                    <input name="installments" type="number" min="1" value={editForm.installments} onChange={handleEditChange} className="edit-input" />
+                    <input name="installments" type="number" min="1" value={editForm.installments} onChange={e => setEditForm(f => ({ ...f, installments: e.target.value }))} className="edit-input" />
                   </div>
                   <div className="form-group">
                     <label>Primer mes</label>
-                    <input name="firstPaymentMonth" type="month" value={editForm.firstPaymentMonth} onChange={handleEditChange} className="edit-input" />
+                    <input name="firstPaymentMonth" type="month" value={editForm.firstPaymentMonth} onChange={e => setEditForm(f => ({ ...f, firstPaymentMonth: e.target.value }))} className="edit-input" />
                   </div>
                 </div>
                 <div className="exp-edit-actions">
@@ -219,10 +156,9 @@ export default function ExpenseList({ expenses, users }) {
                 <div className="exp-card-meta">
                   <span className="badge" style={getBadgeStyle(payerName, users)}>{payerName}</span>
                   {exp.installments > 1
-                    ? <span className="exp-meta-text">{paidInstallments}/{exp.installments} cuotas</span>
-                    : <span className="exp-meta-text">Pago único</span>
-                  }
-                  <span className="exp-meta-text">{formatMonthLabel(exp.firstPaymentMonth)} → {formatMonthLabel(lastMonth)}</span>
+                    ? <span className="exp-meta-text">{paidCount}/{exp.installments} cuotas</span>
+                    : <span className="exp-meta-text">Pago único</span>}
+                  <span className="exp-meta-text">{formatMonthShort(exp.firstPaymentMonth)} → {formatMonthShort(lastMonth)}</span>
                 </div>
               </div>
 
@@ -248,7 +184,7 @@ export default function ExpenseList({ expenses, users }) {
                     </div>
                     <div className="exp-amount-item">
                       <span className="exp-amount-label">Resta</span>
-                      <span className="exp-amount-value red">${formatARS(remainingAmt)}</span>
+                      <span className="exp-amount-value red">${formatARS(exp.totalAmount - paidAmount)}</span>
                     </div>
                   </>
                 )}
@@ -263,7 +199,7 @@ export default function ExpenseList({ expenses, users }) {
               </div>
 
               <div className="exp-card-footer">
-                {exp.createdBy && <span className="exp-created-by">Cargado por {exp.createdBy}</span>}
+                {exp.createdBy && <span className="exp-created-by">Por {exp.createdBy}</span>}
                 <div className="row-actions">
                   <button className="btn-edit" onClick={() => startEdit(exp)} title="Editar">✎</button>
                   <button className="btn-delete" onClick={() => handleDelete(exp.id, exp.name)} title="Eliminar">x</button>

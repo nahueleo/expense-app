@@ -1,103 +1,38 @@
 import { useMemo, useState } from 'react'
 import { getBadgeStyle } from '../utils/badges'
-import { normalizePayerKey, getPayerDisplay } from '../utils/users'
+import { getPayerDisplay } from '../utils/users'
+import { addMonths, getCurrentMonth, formatMonthLabel } from '../utils/dates'
+import { formatARS } from '../utils/format'
+import { getActiveExpenses, calculateBalances, simplifyDebts } from '../utils/finance'
 import PayButtons from './PayButtons'
 
-function addMonths(yearMonth, n) {
-  const [y, m] = yearMonth.split('-').map(Number)
-  const date = new Date(y, m - 1 + n, 1)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-}
+const MONTH_RANGE = { past: 6, future: 18 }
 
-function formatARS(n) {
-  return Math.abs(n).toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
-
-function formatMonthLabel(ym) {
-  const [year, month] = ym.split('-')
-  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-  return `${months[parseInt(month) - 1]} ${year}`
-}
-
-function getCurrentMonth() {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-}
-
-function getActiveExpenses(expenses, month) {
-  return expenses.filter(exp => {
-    const endMonth = addMonths(exp.firstPaymentMonth, exp.installments)
-    return month >= exp.firstPaymentMonth && month < endMonth
-  })
-}
-
-function calculateBalances(expenses, month, people, users) {
-  const balances = {}
-  people.forEach(p => balances[p] = 0)
-
-  expenses.forEach(exp => {
-    const endMonth = addMonths(exp.firstPaymentMonth, exp.installments)
-    if (month >= exp.firstPaymentMonth && month < endMonth) {
-      const installmentAmt = exp.totalAmount / exp.installments
-      const share = installmentAmt / people.length
-      const payerKey = normalizePayerKey(exp.payer, users)
-      if (balances[payerKey] !== undefined) balances[payerKey] += installmentAmt
-      people.forEach(p => { balances[p] -= share })
-    }
-  })
-
-  return balances
-}
-
-function simplifyDebts(balances, people) {
-  const entries = people.map(name => ({ name, bal: balances[name] }))
-  const transactions = []
-  for (let iter = 0; iter < 20; iter++) {
-    entries.sort((a, b) => a.bal - b.bal)
-    const debtor = entries[0]
-    const creditor = entries[entries.length - 1]
-    if (Math.abs(debtor.bal) < 0.5 || Math.abs(creditor.bal) < 0.5) break
-    const amount = Math.min(Math.abs(debtor.bal), creditor.bal)
-    if (amount < 0.5) break
-    transactions.push({ from: debtor.name, to: creditor.name, amount })
-    debtor.bal += amount
-    creditor.bal -= amount
+function buildMonthOptions() {
+  const now = getCurrentMonth()
+  const months = []
+  for (let i = -MONTH_RANGE.past; i <= MONTH_RANGE.future; i++) {
+    months.push(addMonths(now, i))
   }
-  return transactions
+  return months
 }
 
 export default function HomePage({ expenses, users, currentUserEmail, onAddExpense }) {
-  const [month, setMonth] = useState(getCurrentMonth())
+  const [month, setMonth] = useState(getCurrentMonth)
+  const availableMonths = useMemo(buildMonthOptions, [])
 
-  const availableMonths = useMemo(() => {
-    const now = getCurrentMonth()
-    // Range: 6 months back, 18 months forward from today
-    const start = addMonths(now, -6)
-    const end = addMonths(now, 18)
-    const months = []
-    let current = start
-    while (current <= end) {
-      months.push(current)
-      current = addMonths(current, 1)
-    }
-    return months
-  }, [])
+  const people      = users.map(u => u.displayName)
+  const myName      = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
+  const userByName  = Object.fromEntries(users.map(u => [u.displayName, u]))
 
-  const people = users.map(u => u.displayName)
-  const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
-  // Map displayName → user doc for payment link generation
-  const userByName = Object.fromEntries(users.map(u => [u.displayName, u]))
-
-  const active = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
-  const balances = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
+  const active       = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
+  const balances     = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
   const transactions = useMemo(() => simplifyDebts(balances, people), [balances, people])
 
-  const totalMonth = active.reduce((sum, exp) => sum + exp.totalAmount / exp.installments, 0)
-  const myBalance = myName ? balances[myName] : null
+  const totalMonth     = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
+  const myBalance      = myName != null ? balances[myName] : null
   const myTransactions = myName ? transactions.filter(t => t.from === myName || t.to === myName) : []
 
-  // Stats: who paid how much this month
   const payerTotals = {}
   active.forEach(exp => {
     const key = getPayerDisplay(exp.payer, users)
@@ -116,11 +51,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
           onClick={() => setMonth(m => addMonths(m, -1))}
           disabled={month <= availableMonths[0]}
         >‹</button>
-        <select
-          value={month}
-          onChange={e => setMonth(e.target.value)}
-          className="month-select"
-        >
+        <select value={month} onChange={e => setMonth(e.target.value)} className="month-select">
           {availableMonths.map(m => (
             <option key={m} value={m}>
               {formatMonthLabel(m)}{m === currentMonthYM ? ' (este mes)' : ''}
@@ -134,14 +65,10 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         >›</button>
       </div>
 
-      {/* Hero: my situation */}
+      {/* Hero */}
       <div className={`my-hero ${myBalance === null ? '' : myBalance >= 0 ? 'hero-positive' : 'hero-negative'}`}>
         <div className="my-hero-label">
-          {myBalance === null
-            ? 'Tu resumen'
-            : myBalance >= 0
-              ? 'Este mes te deben'
-              : 'Este mes debés pagar'}
+          {myBalance === null ? 'Resumen' : myBalance >= 0 ? 'Este mes te deben' : 'Este mes debés pagar'}
         </div>
         <div className="my-hero-amount">
           {myBalance === null ? '—' : `$${formatARS(myBalance)}`}
@@ -149,7 +76,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         <div className="my-hero-month">{formatMonthLabel(month)}</div>
       </div>
 
-      {/* My transactions */}
+      {/* My pending payments */}
       {myTransactions.length > 0 && (
         <div className="home-card">
           <h3 className="home-card-title">Tus pagos pendientes</h3>
@@ -187,7 +114,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         </div>
       )}
 
-      {/* Stats row */}
+      {/* Stats */}
       <div className="stats-row">
         <div className="stat-card">
           <div className="stat-value">${formatARS(totalMonth)}</div>
@@ -203,28 +130,25 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         </div>
       </div>
 
-      {/* Who paid what */}
+      {/* Who paid */}
       {Object.keys(payerTotals).length > 0 && (
         <div className="home-card">
           <h3 className="home-card-title">Quién pagó este mes</h3>
           {Object.entries(payerTotals)
             .sort(([, a], [, b]) => b - a)
-            .map(([name, total]) => {
-              const pct = totalMonth > 0 ? (total / totalMonth) * 100 : 0
-              return (
-                <div key={name} className="payer-row">
-                  <span className="badge" style={getBadgeStyle(name, users)}>{name}</span>
-                  <div className="payer-bar-wrap">
-                    <div className="payer-bar" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="payer-amount">${formatARS(total)}</span>
+            .map(([name, total]) => (
+              <div key={name} className="payer-row">
+                <span className="badge" style={getBadgeStyle(name, users)}>{name}</span>
+                <div className="payer-bar-wrap">
+                  <div className="payer-bar" style={{ width: `${totalMonth > 0 ? (total / totalMonth) * 100 : 0}%` }} />
                 </div>
-              )
-            })}
+                <span className="payer-amount">${formatARS(total)}</span>
+              </div>
+            ))}
         </div>
       )}
 
-      {/* Active expenses list */}
+      {/* Active expenses */}
       {active.length > 0 && (
         <div className="home-card">
           <h3 className="home-card-title">Gastos activos</h3>
@@ -239,9 +163,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                     {getPayerDisplay(exp.payer, users)}
                   </span>
                   {exp.installments > 1 && (
-                    <span className="active-exp-installments">
-                      {exp.installments} cuotas
-                    </span>
+                    <span className="active-exp-installments">{exp.installments} cuotas</span>
                   )}
                 </div>
                 <div className="active-exp-amounts">

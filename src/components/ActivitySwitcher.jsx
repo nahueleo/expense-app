@@ -57,14 +57,15 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
     if (!form.name.trim()) return
     setSaving(true)
     // Always include self
-    const members = Array.from(new Set([currentUserEmail, ...form.members]))
+    const creatorEmail = currentUserEmail?.toLowerCase()
+    const members = Array.from(new Set([creatorEmail, ...form.members.map(e => e.toLowerCase())]))
     const ref = await addDoc(collection(db, 'activities'), {
       name: form.name.trim(),
       emoji: form.emoji,
       type: form.type,
       members,
-      admins: [currentUserEmail],
-      createdBy: currentUserEmail,
+      admins: [creatorEmail],
+      createdBy: creatorEmail,
       createdAt: serverTimestamp(),
     })
     setSaving(false)
