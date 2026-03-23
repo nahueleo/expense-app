@@ -36,9 +36,13 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
     return payments.find(p => p.fromName === fromName && p.toName === toName && p.forMonth === month) ?? null
   }
 
-  const totalMonth     = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
-  const myBalance      = myName != null ? balances[myName] : null
-  const myTransactions = myName ? transactions.filter(t => t.from === myName || t.to === myName) : []
+  const totalMonth = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
+
+  // Only show transactions/balances for months that have active expenses.
+  // If no expenses exist, payments for that month would create phantom debts.
+  const visibleTransactions = active.length > 0 ? transactions : []
+  const myBalance           = active.length > 0 && myName != null ? balances[myName] : null
+  const myTransactions      = myName ? visibleTransactions.filter(t => t.from === myName || t.to === myName) : []
 
   const payerTotals = {}
   active.forEach(exp => {

@@ -26,9 +26,11 @@ export default function MonthlySummary({ expenses, users, currentUserEmail, paym
           const active       = getActiveExpenses(expenses, month)
           const rawBalances  = calculateBalances(expenses, month, people, users)
           const balances     = applyPayments(rawBalances, payments, month)
-          const transactions = simplifyDebts(balances, people)
           const totalMonth   = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
-          const myBalance    = myName != null ? balances[myName] : null
+
+          // Guard: no transactions for months without active expenses
+          const transactions = active.length > 0 ? simplifyDebts(balances, people) : []
+          const myBalance    = active.length > 0 && myName != null ? balances[myName] : null
           const isExpanded   = expanded[month]
 
           const getPayment = (fromName, toName) =>
