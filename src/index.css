@@ -435,11 +435,23 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  width: 30px;
   height: 30px;
-  border-radius: 50%;
+  min-width: 30px;
+  border-radius: 15px;
   transition: background 0.15s, transform 0.1s;
   color: white;
+}
+
+.btn-pay-modo {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 10px;
+  letter-spacing: 0.03em;
+  background: #6b21a8;
+}
+
+.btn-pay-modo:hover {
+  background: #581c87;
 }
 
 .btn-pay:active {
@@ -454,13 +466,6 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
   background: #0082c0;
 }
 
-.btn-pay-modo {
-  background: #6b21a8;
-}
-
-.btn-pay-modo:hover {
-  background: #581c87;
-}
 
 /* keep old class for MonthlySummary compatibility */
 .btn-mp {

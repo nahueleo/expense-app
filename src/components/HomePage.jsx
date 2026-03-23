@@ -8,13 +8,6 @@ function IconMP() {
   )
 }
 
-function IconModo() {
-  return (
-    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-      <path d="M12.136.326A1.5 1.5 0 0 1 14 1.78V3h.5A1.5 1.5 0 0 1 16 4.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 13.5v-9a1.5 1.5 0 0 1 1.432-1.499L12.136.326zm-3.137 4.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM5.5 4a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h9a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/>
-    </svg>
-  )
-}
 import { getBadgeStyle } from '../utils/badges'
 import { normalizePayerKey, getPayerDisplay } from '../utils/users'
 
@@ -202,7 +195,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                           className="btn-pay btn-pay-modo"
                           title="Pagar con MODO"
                         >
-                          <IconModo />
+                          MODO
                         </a>
                       )}
                     </div>
