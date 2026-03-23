@@ -34,10 +34,16 @@ export default function MonthlySummary({ expenses, users, currentUserEmail, paym
           const myBalance       = active.length > 0 && myName != null ? adjustedBalances[myName] : null
           const isExpanded   = expanded[month]
 
-          const getPayment = (fromName, toName) =>
-            payments.find(p => p.fromName === fromName && p.toName === toName && p.forMonth === month) ?? null
+          // Returns all payments + total paid + remaining for a given pair+month
+          const getPaymentInfo = (fromName, toName, debtAmount) => {
+            const txPayments = payments.filter(p => p.fromName === fromName && p.toName === toName && p.forMonth === month)
+            const totalPaid  = txPayments.reduce((s, p) => s + p.amount, 0)
+            const remaining  = Math.max(0, debtAmount - totalPaid)
+            return { txPayments, totalPaid, remaining, fullyPaid: remaining < 0.5 }
+          }
 
-          const allPaid = allTransactions.length > 0 && allTransactions.every(t => getPayment(t.from, t.to))
+          const allPaid = allTransactions.length > 0 &&
+            allTransactions.every(t => getPaymentInfo(t.from, t.to, t.amount).fullyPaid)
 
           return (
             <div key={month} className="month-card">
@@ -62,26 +68,27 @@ export default function MonthlySummary({ expenses, users, currentUserEmail, paym
                   ) : (
                     <div className="history-transactions">
                       {allTransactions.map((t, i) => {
-                        const payment  = getPayment(t.from, t.to)
+                        const { txPayments, totalPaid, remaining, fullyPaid } = getPaymentInfo(t.from, t.to, t.amount)
                         const isMyDebt = t.from === myName
 
                         return (
-                          <div key={i} className={`history-row ${payment ? 'history-row-paid' : ''} ${isMyDebt ? 'history-row-mine' : ''}`}>
+                          <div key={i} className={`history-row ${fullyPaid ? 'history-row-paid' : ''} ${isMyDebt ? 'history-row-mine' : ''}`}>
                             <div className="history-row-left">
                               <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
                               <span className="history-arrow">→</span>
                               <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                             </div>
                             <div className="history-row-right">
-                              <span className={`history-amount ${payment ? 'paid-text' : isMyDebt ? 'negative-text' : ''}`}>
-                                ${formatARS(t.amount)}
+                              <span className={`history-amount ${fullyPaid ? 'paid-text' : isMyDebt ? 'negative-text' : ''}`}>
+                                ${formatARS(fullyPaid ? t.amount : remaining)}
                               </span>
-                              {payment ? (
-                                <PaidBadge payment={payment} />
-                              ) : isMyDebt && (
+                              {/* Previous payments with Anular button */}
+                              {txPayments.map(p => <PaidBadge key={p.id} payment={p} />)}
+                              {/* Pagar button if there's remaining debt */}
+                              {!fullyPaid && isMyDebt && (
                                 <button
                                   className="btn-pay-action"
-                                  onClick={() => { setPayingTransaction(t); setPayingMonth(month) }}
+                                  onClick={() => { setPayingTransaction({ ...t, amount: remaining }); setPayingMonth(month) }}
                                 >
                                   Pagar
                                 </button>

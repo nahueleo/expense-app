@@ -5,6 +5,7 @@ import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 import { formatARS } from '../utils/format'
 import { formatMonthLabel, getCurrentMonth } from '../utils/dates'
+import { buildMpLink, buildModoLink } from '../utils/paymentLinks'
 
 export default function PaymentModal({ transaction, toUser, activityId, fromName, users, onClose, initialMonth }) {
   const forMonth = initialMonth || getCurrentMonth()

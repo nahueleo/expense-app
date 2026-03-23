@@ -31,8 +31,11 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
   const rawBalances      = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
   const adjustedBalances = useMemo(() => applyPayments(rawBalances, payments, month), [rawBalances, payments, month])
 
-  function getPayment(fromName, toName) {
-    return payments.find(p => p.fromName === fromName && p.toName === toName && p.forMonth === month) ?? null
+  function getPaymentInfo(fromName, toName, debtAmount) {
+    const txPayments = payments.filter(p => p.fromName === fromName && p.toName === toName && p.forMonth === month)
+    const totalPaid  = txPayments.reduce((s, p) => s + p.amount, 0)
+    const remaining  = Math.max(0, debtAmount - totalPaid)
+    return { txPayments, totalPaid, remaining, fullyPaid: remaining < 0.5 }
   }
 
   const totalMonth = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
@@ -104,23 +107,25 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         <div className="home-card">
           <h3 className="home-card-title">Tus pagos</h3>
           {myTransactions.map((t, i) => {
-            const payment = t.from === myName ? getPayment(myName, t.to) : getPayment(t.from, myName)
+            const isMyDebt = t.from === myName
+            const { txPayments, remaining, fullyPaid } = isMyDebt
+              ? getPaymentInfo(myName, t.to, t.amount)
+              : getPaymentInfo(t.from, myName, t.amount)
 
             return (
-              <div key={i} className={`my-transaction-row ${payment ? 'transaction-paid' : ''}`}>
-                {t.from === myName ? (
+              <div key={i} className={`my-transaction-row ${fullyPaid ? 'transaction-paid' : ''}`}>
+                {isMyDebt ? (
                   <>
                     <div className="transaction-info">
                       <span className="transaction-label">Pagarle a</span>
                       <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                     </div>
                     <div className="transaction-right">
-                      {payment ? (
-                        <PaidBadge payment={payment} />
-                      ) : (
+                      {txPayments.map(p => <PaidBadge key={p.id} payment={p} />)}
+                      {!fullyPaid && (
                         <>
-                          <span className="transaction-amount negative">${formatARS(t.amount)}</span>
-                          <button className="btn-pay-action" onClick={() => setPayingTransaction({ ...t, forMonth: month })}>
+                          <span className="transaction-amount negative">${formatARS(remaining)}</span>
+                          <button className="btn-pay-action" onClick={() => setPayingTransaction({ ...t, amount: remaining, forMonth: month })}>
                             Pagar
                           </button>
                         </>
@@ -133,8 +138,8 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                       <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
                       <span className="transaction-label">te debe</span>
                     </div>
-                    {payment
-                      ? <PaidBadge payment={payment} />
+                    {txPayments.length > 0
+                      ? <>{txPayments.map(p => <PaidBadge key={p.id} payment={p} />)}</>
                       : <span className="transaction-amount positive">${formatARS(t.amount)}</span>
                     }
                   </>
