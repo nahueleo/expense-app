@@ -89,7 +89,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
     users.map(u => [u.displayName, u.mpAlias]).filter(([, alias]) => alias)
   )
   const modoAliases = Object.fromEntries(
-    users.map(u => [u.displayName, u.modoAlias]).filter(([, alias]) => alias)
+    users.map(u => [u.displayName, u.modoAlias || u.email]).filter(([, alias]) => alias)
   )
 
   const active = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
