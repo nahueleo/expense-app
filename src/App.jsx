@@ -26,7 +26,7 @@ const Icons = {
 export default function App() {
   const user = useAuth()
   const { users, loading: usersLoading } = useUsers()
-  const { activities } = useActivities()
+  const { activities, loading: activitiesLoading } = useActivities()
   const [expenses, setExpenses] = useState([])
   const [expensesLoading, setExpensesLoading] = useState(true)
   const [tab, setTab] = useState('home')
@@ -41,13 +41,18 @@ export default function App() {
   const myActivities = activities.filter(a => a.members?.includes(user?.email?.toLowerCase()))
   const currentActivity = myActivities.find(a => a.id === currentActivityId)
 
-  // If stored activity no longer belongs to user, clear it
+  // Users filtered to current activity members only
+  const activityUsers = currentActivity
+    ? users.filter(u => currentActivity.members?.includes(u.email))
+    : users
+
+  // If stored activity doesn't belong to user, clear it
   useEffect(() => {
-    if (currentActivityId && myActivities.length > 0 && !myActivities.find(a => a.id === currentActivityId)) {
+    if (currentActivityId && !activitiesLoading && !myActivities.find(a => a.id === currentActivityId)) {
       setCurrentActivityId(null)
       localStorage.removeItem('currentActivityId')
     }
-  }, [currentActivityId, myActivities])
+  }, [currentActivityId, myActivities, activitiesLoading])
   const filteredExpenses = currentActivityId
     ? expenses.filter(e => e.activityId === currentActivityId)
     : []
@@ -86,7 +91,7 @@ export default function App() {
     return unsub
   }, [user])
 
-  if (user === undefined || (user && usersLoading)) return <div className="loading">Cargando...</div>
+  if (user === undefined || (user && (usersLoading || activitiesLoading))) return <div className="loading">Cargando...</div>
   if (user === null) return <Login />
 
   const NAV = [
@@ -96,7 +101,7 @@ export default function App() {
     ...(isAdmin ? [{ id: 'users', label: 'Usuarios', icon: Icons.users }] : []),
   ]
 
-  // No activity selected → show activities overview (no tabs, no FAB)
+  // No activity selected → show overview
   if (!currentActivityId) {
     return (
       <div className="app">
@@ -131,6 +136,9 @@ export default function App() {
     )
   }
 
+  // activityUsers = only members of the current activity
+  const au = activityUsers
+
   return (
     <div className="app">
       <header>
@@ -139,7 +147,7 @@ export default function App() {
           currentActivityId={currentActivityId}
           onSelect={selectActivity}
           currentUserEmail={user.email}
-          users={users}
+          users={au}
           open={switcherOpen}
           onOpenChange={setSwitcherOpen}
         />
@@ -168,17 +176,17 @@ export default function App() {
 
       <main>
         {tab === 'add' ? (
-          <ExpenseForm user={user} users={users} activities={myActivities} currentActivityId={currentActivityId} onAdded={() => setTab('expenses')} />
+          <ExpenseForm user={user} users={au} activities={myActivities} currentActivityId={currentActivityId} onAdded={() => setTab('expenses')} />
         ) : expensesLoading ? (
           <div className="loading">Cargando...</div>
         ) : tab === 'home' ? (
-          <HomePage expenses={filteredExpenses} users={users} currentUserEmail={user.email} onAddExpense={() => setTab('add')} activity={currentActivity} />
+          <HomePage expenses={filteredExpenses} users={au} currentUserEmail={user.email} onAddExpense={() => setTab('add')} activity={currentActivity} />
         ) : tab === 'history' ? (
-          <MonthlySummary expenses={filteredExpenses} users={users} currentUserEmail={user.email} />
+          <MonthlySummary expenses={filteredExpenses} users={au} currentUserEmail={user.email} />
         ) : tab === 'expenses' ? (
-          <ExpenseList expenses={filteredExpenses} users={users} />
+          <ExpenseList expenses={filteredExpenses} users={au} />
         ) : (
-          <UserManager users={users} currentUserDoc={currentUserDoc} currentActivity={currentActivity} />
+          <UserManager users={au} currentUserDoc={currentUserDoc} currentActivity={currentActivity} />
         )}
       </main>
     </div>

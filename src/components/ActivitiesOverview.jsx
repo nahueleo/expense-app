@@ -109,14 +109,46 @@ export default function ActivitiesOverview({ activities, expenses, users, onSele
                 )}
               </div>
 
+              {stats.total > 0 && (
+                <div className="activity-progress-wrap">
+                  <div className="activity-progress-bar">
+                    <div
+                      className="activity-progress-fill"
+                      style={{ width: `${Math.min(100, stats.total > 0 ? (stats.paid / stats.total) * 100 : 0)}%` }}
+                    />
+                  </div>
+                  <span className="activity-progress-pct">
+                    {stats.total > 0 ? Math.round((stats.paid / stats.total) * 100) : 0}%
+                  </span>
+                </div>
+              )}
+
               <div className="activity-card-stats">
                 <div className="activity-stat">
                   <span className="activity-stat-value">{stats.count}</span>
                   <span className="activity-stat-label">gastos</span>
                 </div>
                 <div className="activity-stat">
-                  <span className="activity-stat-value">${formatARS(stats.monthlyTotal)}</span>
-                  <span className="activity-stat-label">este mes</span>
+                  <span className="activity-stat-value">${formatARS(stats.total)}</span>
+                  <span className="activity-stat-label">total</span>
+                </div>
+                <div className="activity-stat">
+                  {stats.done ? (
+                    <>
+                      <span className="activity-stat-value" style={{ color: 'var(--green-ios)' }}>✓</span>
+                      <span className="activity-stat-label">pagado</span>
+                    </>
+                  ) : stats.lastPaymentMonth ? (
+                    <>
+                      <span className="activity-stat-value" style={{ fontSize: 13 }}>{formatMonthLabel(stats.lastPaymentMonth)}</span>
+                      <span className="activity-stat-label">último pago</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="activity-stat-value">—</span>
+                      <span className="activity-stat-label">sin gastos</span>
+                    </>
+                  )}
                 </div>
               </div>
             </button>
