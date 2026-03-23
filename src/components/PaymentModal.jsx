@@ -70,12 +70,19 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
               <span className="payment-alias-label">Mercado Pago</span>
               <span className="payment-alias-value">{toUser.mpAlias}</span>
             </div>
-            <button
-              className="btn-copy"
-              onClick={() => copyToClipboard(toUser.mpAlias, 'mp')}
-            >
-              {copied === 'mp' ? '✓ Copiado' : 'Copiar'}
-            </button>
+            <div className="alias-actions">
+              <button className="btn-copy" onClick={() => copyToClipboard(toUser.mpAlias, 'mp')}>
+                {copied === 'mp' ? '✓' : 'Copiar'}
+              </button>
+              <a
+                href={buildMpLink(toUser.mpAlias, transaction.amount)}
+                className="btn-open-app btn-open-mp"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Abrir MP
+              </a>
+            </div>
           </div>
         )}
 
@@ -85,12 +92,19 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
               <span className="payment-alias-label">MODO</span>
               <span className="payment-alias-value">{toUser.modoAlias}</span>
             </div>
-            <button
-              className="btn-copy"
-              onClick={() => copyToClipboard(toUser.modoAlias, 'modo')}
-            >
-              {copied === 'modo' ? '✓ Copiado' : 'Copiar'}
-            </button>
+            <div className="alias-actions">
+              <button className="btn-copy" onClick={() => copyToClipboard(toUser.modoAlias, 'modo')}>
+                {copied === 'modo' ? '✓' : 'Copiar'}
+              </button>
+              <a
+                href={buildModoLink(toUser.modoAlias, transaction.amount)}
+                className="btn-open-app btn-open-modo"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Abrir MODO
+              </a>
+            </div>
           </div>
         )}
 

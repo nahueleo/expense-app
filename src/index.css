@@ -202,6 +202,22 @@ header h1 {
   -webkit-tap-highlight-color: transparent;
 }
 
+.alias-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+.btn-open-app {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: var(--radius-xs);
+  text-decoration: none;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-open-app:active { opacity: 0.7; }
+.btn-open-mp   { background: #009ee3; color: white; }
+.btn-open-modo { background: #6c3ed6; color: white; }
+
 .payment-no-alias {
   font-size: 14px;
   color: var(--text-muted);
