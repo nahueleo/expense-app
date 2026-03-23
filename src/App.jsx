@@ -37,7 +37,9 @@ export default function App() {
 
   const currentUserDoc = users.find(u => u.email === user?.email?.toLowerCase())
   const isAdmin = currentUserDoc?.isAdmin === true
-  const currentActivity = activities.find(a => a.id === currentActivityId)
+  // Only show activities where the current user is a member
+  const myActivities = activities.filter(a => a.members?.includes(user?.email?.toLowerCase()))
+  const currentActivity = myActivities.find(a => a.id === currentActivityId)
   const filteredExpenses = currentActivityId
     ? expenses.filter(e => e.activityId === currentActivityId)
     : []
