@@ -12,6 +12,7 @@ import ExpenseList from './components/ExpenseList'
 import MonthlySummary from './components/MonthlySummary'
 import UserManager from './components/UserManager'
 import ActivitySwitcher from './components/ActivitySwitcher'
+import ActivitiesOverview from './components/ActivitiesOverview'
 
 const BOOTSTRAP_EMAIL = 'nahueleo@gmail.com'
 
@@ -54,6 +55,7 @@ export default function App() {
   const [currentActivityId, setCurrentActivityId] = useState(
     () => localStorage.getItem('currentActivityId') || null
   )
+  const [sheetOpen, setSheetOpen] = useState(false)
 
   const currentUserDoc = users.find(u => u.email === user?.email?.toLowerCase())
   const isAdmin = currentUserDoc?.isAdmin === true

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 
@@ -52,8 +53,8 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
         <span className="activity-trigger-chevron">⌄</span>
       </button>
 
-      {/* Bottom sheet */}
-      {open && (
+      {/* Bottom sheet — rendered via portal to escape header stacking context */}
+      {open && createPortal(
         <div className="sheet-overlay" onClick={() => { setOpen(false); setCreating(false) }}>
           <div className="sheet" onClick={e => e.stopPropagation()}>
             <div className="sheet-handle" />
@@ -156,7 +157,8 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
