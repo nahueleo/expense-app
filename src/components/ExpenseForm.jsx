@@ -2,30 +2,28 @@ import { useState } from 'react'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 
-const PAYERS = ['nahuel', 'Caro', 'Juli']
-
 const today = new Date()
 const defaultMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`
 
 const emptyForm = {
   name: '',
-  payer: 'nahuel',
+  payer: '',
   installments: 1,
   totalAmount: '',
   firstPaymentMonth: defaultMonth,
 }
 
-export default function ExpenseForm({ onAdded, user }) {
+export default function ExpenseForm({ user, users }) {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const installmentAmount = form.totalAmount
+  const installmentAmount = form.totalAmount && form.installments
     ? (parseFloat(form.totalAmount) / parseInt(form.installments)).toFixed(2)
     : 0
 
-  const sharePerPerson = form.totalAmount
-    ? (parseFloat(form.totalAmount) / parseInt(form.installments) / PAYERS.length).toFixed(2)
+  const sharePerPerson = form.totalAmount && users.length > 0
+    ? (parseFloat(form.totalAmount) / parseInt(form.installments) / users.length).toFixed(2)
     : 0
 
   function handleChange(e) {
@@ -35,7 +33,7 @@ export default function ExpenseForm({ onAdded, user }) {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (!form.name.trim() || !form.totalAmount) {
+    if (!form.name.trim() || !form.totalAmount || !form.payer) {
       setError('Completa todos los campos')
       return
     }
@@ -52,7 +50,6 @@ export default function ExpenseForm({ onAdded, user }) {
         createdBy: user?.displayName || user?.email || 'desconocido',
       })
       setForm(emptyForm)
-      onAdded?.()
     } catch (err) {
       setError('Error al guardar: ' + err.message)
     }
@@ -77,8 +74,11 @@ export default function ExpenseForm({ onAdded, user }) {
 
         <div className="form-group">
           <label>Quien pago</label>
-          <select name="payer" value={form.payer} onChange={handleChange}>
-            {PAYERS.map(p => <option key={p} value={p}>{p}</option>)}
+          <select name="payer" value={form.payer} onChange={handleChange} required>
+            <option value="">Seleccionar...</option>
+            {users.map(u => (
+              <option key={u.id} value={u.displayName}>{u.displayName}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -126,7 +126,9 @@ export default function ExpenseForm({ onAdded, user }) {
       {form.totalAmount > 0 && (
         <div className="form-preview">
           <span>Cuota mensual: <strong>${parseFloat(installmentAmount).toLocaleString('es-AR')}</strong></span>
-          <span>C/U ({PAYERS.length} personas): <strong>${parseFloat(sharePerPerson).toLocaleString('es-AR')}</strong></span>
+          {users.length > 0 && (
+            <span>C/U ({users.length} personas): <strong>${parseFloat(sharePerPerson).toLocaleString('es-AR')}</strong></span>
+          )}
         </div>
       )}
 
