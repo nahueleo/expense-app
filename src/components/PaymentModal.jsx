@@ -10,22 +10,28 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
   const forMonth = initialMonth || getCurrentMonth()
   const [confirming, setConfirming] = useState(false)
   const [copied, setCopied]       = useState(null)
+  const [err, setErr]             = useState('')
 
   const alias = toUser?.mpAlias || toUser?.modoAlias || null
 
   async function handleConfirm() {
     setConfirming(true)
-    await addDoc(collection(db, 'payments'), {
-      activityId,
-      fromName,
-      toName: transaction.to,
-      fromEmail: '',   // can be enriched if needed
-      toEmail: toUser?.email || '',
-      amount: transaction.amount,
-      forMonth,
-      paidAt: serverTimestamp(),
-    })
-    onClose()
+    setErr('')
+    try {
+      await addDoc(collection(db, 'payments'), {
+        activityId,
+        fromName,
+        toName: transaction.to,
+        toEmail: toUser?.email || '',
+        amount: transaction.amount,
+        forMonth,
+        paidAt: serverTimestamp(),
+      })
+      onClose()
+    } catch (e) {
+      setErr('Error al guardar: ' + e.message)
+      setConfirming(false)
+    }
   }
 
   function copyToClipboard(text, key) {
@@ -94,6 +100,8 @@ export default function PaymentModal({ transaction, toUser, activityId, fromName
         )}
 
         {/* Actions */}
+        {err && <p className="form-error">{err}</p>}
+
         <div className="payment-actions">
           <button className="btn-cancel" onClick={onClose}>Cancelar</button>
           <button

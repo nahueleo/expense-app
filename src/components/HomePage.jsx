@@ -120,7 +120,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                       ) : (
                         <>
                           <span className="transaction-amount negative">${formatARS(t.amount)}</span>
-                          <button className="btn-pay-action" onClick={() => setPayingTransaction(t)}>
+                          <button className="btn-pay-action" onClick={() => setPayingTransaction({ ...t, forMonth: month })}>
                             Pagar
                           </button>
                         </>
@@ -152,6 +152,7 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
           activityId={activityId}
           fromName={myName}
           users={users}
+          initialMonth={payingTransaction.forMonth}
           onClose={() => setPayingTransaction(null)}
         />
       )}
