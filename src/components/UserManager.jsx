@@ -1,58 +1,46 @@
 import { useState } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
-
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 
 const emptyForm = { email: '', displayName: '', mpAlias: '', modoAlias: '' }
 
-export default function UserManager({ users, currentUserDoc }) {
-  const [form, setForm] = useState(emptyForm)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+export default function UserManager({ users, currentUserDoc, currentActivity }) {
   const [editingId, setEditingId] = useState(null)
   const [editForm, setEditForm] = useState({})
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [form, setForm] = useState(emptyForm)
+  const [addingGlobal, setAddingGlobal] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  function handleChange(e) {
-    const { name, value } = e.target
-    setForm(f => ({ ...f, [name]: value }))
+  const isActivityAdmin = currentActivity?.admins?.includes(currentUserDoc?.email)
+  const isAppAdmin = currentUserDoc?.isAdmin === true
+
+  // Members of current activity
+  const memberEmails = currentActivity?.members ?? []
+  const activityMembers = users.filter(u => memberEmails.includes(u.email))
+  // Invited but not yet registered
+  const pendingEmails = memberEmails.filter(email => !users.find(u => u.email === email))
+
+  // ── Activity member management ──
+  async function addMemberToActivity(email) {
+    if (!currentActivity || memberEmails.includes(email)) return
+    await updateDoc(doc(db, 'activities', currentActivity.id), {
+      members: [...memberEmails, email.toLowerCase().trim()],
+    })
+    setInviteEmail('')
   }
 
-  async function handleAdd(e) {
-    e.preventDefault()
-    if (!form.email.trim() || !form.displayName.trim()) {
-      setError('Email y nombre son requeridos')
-      return
-    }
-    setLoading(true)
-    setError('')
-    try {
-      await addDoc(collection(db, 'users'), {
-        email: form.email.trim().toLowerCase(),
-        displayName: form.displayName.trim(),
-        mpAlias: form.mpAlias.trim(),
-        modoAlias: form.modoAlias.trim(),
-        addedAt: serverTimestamp(),
-      })
-      setForm(emptyForm)
-    } catch (err) {
-      setError('Error: ' + err.message)
-    }
-    setLoading(false)
+  async function removeMemberFromActivity(email) {
+    if (!currentActivity) return
+    if (!window.confirm(`Quitar a ${email} de esta actividad?`)) return
+    await updateDoc(doc(db, 'activities', currentActivity.id), {
+      members: memberEmails.filter(e => e !== email),
+    })
   }
 
-  async function handleRemove(id, name) {
-    if (!window.confirm(`Eliminar usuario "${name}"?`)) return
-    await deleteDoc(doc(db, 'users', id))
-    if (editingId === id) setEditingId(null)
-  }
-
-  async function toggleAdmin(u) {
-    // Can't remove your own admin
-    if (u.id === currentUserDoc?.id && u.isAdmin) return
-    await updateDoc(doc(db, 'users', u.id), { isAdmin: !u.isAdmin })
-  }
-
+  // ── User profile editing (app admin only) ──
   function startEdit(u) {
     setEditingId(u.id)
     setEditForm({ displayName: u.displayName, mpAlias: u.mpAlias || '', modoAlias: u.modoAlias || '' })
@@ -67,122 +55,161 @@ export default function UserManager({ users, currentUserDoc }) {
     setEditingId(null)
   }
 
+  async function toggleAdmin(u) {
+    if (u.id === currentUserDoc?.id && u.isAdmin) return
+    await updateDoc(doc(db, 'users', u.id), { isAdmin: !u.isAdmin })
+  }
+
+  // ── Add new global user (app admin only) ──
+  function handleChange(e) {
+    const { name, value } = e.target
+    setForm(f => ({ ...f, [name]: value }))
+  }
+
+  async function handleAddGlobal(e) {
+    e.preventDefault()
+    if (!form.email.trim() || !form.displayName.trim()) { setError('Email y nombre son requeridos'); return }
+    setLoading(true); setError('')
+    try {
+      const newEmail = form.email.trim().toLowerCase()
+      await addDoc(collection(db, 'users'), {
+        email: newEmail, displayName: form.displayName.trim(),
+        mpAlias: form.mpAlias.trim(), modoAlias: form.modoAlias.trim(),
+        addedAt: serverTimestamp(),
+      })
+      // Also add to current activity
+      if (currentActivity && !memberEmails.includes(newEmail)) {
+        await updateDoc(doc(db, 'activities', currentActivity.id), {
+          members: [...memberEmails, newEmail],
+        })
+      }
+      setForm(emptyForm); setAddingGlobal(false)
+    } catch (err) { setError('Error: ' + err.message) }
+    setLoading(false)
+  }
+
   return (
     <div className="user-manager">
-      <h2>Usuarios registrados</h2>
+      <h2>{currentActivity ? `Miembros — ${currentActivity.name}` : 'Usuarios'}</h2>
 
+      {/* Activity members */}
       <div className="users-list">
-        {users.length === 0 && (
-          <div className="empty">No hay usuarios registrados todavia.</div>
+        {activityMembers.length === 0 && pendingEmails.length === 0 && (
+          <div className="empty">No hay miembros en esta actividad.</div>
         )}
-        {users.map(u => (
+
+        {activityMembers.map(u => (
           <div key={u.id} className="user-row">
             {editingId === u.id ? (
               <>
-                <input
-                  className="edit-input"
-                  value={editForm.displayName}
+                <input className="edit-input" value={editForm.displayName}
                   onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
-                  placeholder="Nombre"
-                  style={{ width: 100 }}
-                />
-                <input
-                  className="edit-input"
-                  value={editForm.mpAlias}
+                  placeholder="Nombre" style={{ width: 90 }} />
+                <input className="edit-input" value={editForm.mpAlias}
                   onChange={e => setEditForm(f => ({ ...f, mpAlias: e.target.value }))}
-                  placeholder="alias.mp"
-                  style={{ flex: 1 }}
-                />
-                <input
-                  className="edit-input"
-                  value={editForm.modoAlias}
+                  placeholder="alias.mp" style={{ flex: 1 }} />
+                <input className="edit-input" value={editForm.modoAlias}
                   onChange={e => setEditForm(f => ({ ...f, modoAlias: e.target.value }))}
-                  placeholder="alias.modo"
-                  style={{ flex: 1 }}
-                />
-                <span className="user-email" style={{ fontSize: 12 }}>{u.email}</span>
+                  placeholder="alias.modo" style={{ flex: 1 }} />
                 <button className="btn-save" onClick={() => handleSaveEdit(u.id)}>OK</button>
                 <button className="btn-cancel" onClick={() => setEditingId(null)}>✕</button>
               </>
             ) : (
               <>
-                <span className="badge" style={getBadgeStyle(u.displayName, users)}>
-                  {u.displayName}
-                </span>
+                <span className="badge" style={getBadgeStyle(u.displayName, activityMembers)}>{u.displayName}</span>
                 <div className="user-details">
                   <span className="user-email">{u.email}</span>
-                  {u.mpAlias
-                    ? <span className="user-mp-alias">MP: {u.mpAlias}</span>
-                    : <span className="user-mp-alias" style={{ color: '#aaa' }}>Sin alias MP</span>
-                  }
-                  {u.modoAlias
-                    ? <span className="user-mp-alias">MODO: {u.modoAlias}</span>
-                    : <span className="user-mp-alias" style={{ color: '#aaa' }}>Sin alias MODO</span>
-                  }
+                  <span className="user-mp-alias">
+                    {u.mpAlias ? `MP: ${u.mpAlias}` : ''}
+                    {u.mpAlias && u.modoAlias ? ' · ' : ''}
+                    {u.modoAlias ? `MODO: ${u.modoAlias}` : ''}
+                    {!u.mpAlias && !u.modoAlias ? 'Sin alias de pago' : ''}
+                  </span>
                 </div>
-                <button
-                  className={`btn-admin-toggle ${u.isAdmin ? 'is-admin' : ''}`}
-                  onClick={() => toggleAdmin(u)}
-                  title={u.isAdmin ? 'Quitar admin' : 'Hacer admin'}
-                  disabled={u.id === currentUserDoc?.id && u.isAdmin}
-                >
-                  {u.isAdmin ? '★' : '☆'}
-                </button>
-                <button className="btn-edit" onClick={() => startEdit(u)} title="Editar">✎</button>
-                <button className="btn-delete" onClick={() => handleRemove(u.id, u.displayName)}>x</button>
+                {isAppAdmin && (
+                  <button
+                    className={`btn-admin-toggle ${u.isAdmin ? 'is-admin' : ''}`}
+                    onClick={() => toggleAdmin(u)}
+                    title={u.isAdmin ? 'Quitar admin' : 'Hacer admin'}
+                    disabled={u.id === currentUserDoc?.id && u.isAdmin}
+                  >
+                    {u.isAdmin ? '★' : '☆'}
+                  </button>
+                )}
+                {isAppAdmin && (
+                  <button className="btn-edit" onClick={() => startEdit(u)} title="Editar">✎</button>
+                )}
+                {(isActivityAdmin || isAppAdmin) && (
+                  <button className="btn-delete" onClick={() => removeMemberFromActivity(u.email)} title="Quitar de actividad">x</button>
+                )}
               </>
+            )}
+          </div>
+        ))}
+
+        {/* Pending invites */}
+        {pendingEmails.map(email => (
+          <div key={email} className="user-row user-row-pending">
+            <span className="pending-avatar">?</span>
+            <div className="user-details">
+              <span className="user-email">{email}</span>
+              <span className="user-mp-alias pending-label">Invitado — aún no se registró</span>
+            </div>
+            {(isActivityAdmin || isAppAdmin) && (
+              <button className="btn-delete" onClick={() => removeMemberFromActivity(email)} title="Quitar invitación">x</button>
             )}
           </div>
         ))}
       </div>
 
-      <form onSubmit={handleAdd} className="user-add-form">
-        <h4>Agregar usuario</h4>
-        <div className="form-row">
-          <div className="form-group">
-            <label>Email (Gmail)</label>
+      {/* Add member to activity */}
+      {(isActivityAdmin || isAppAdmin) && currentActivity && (
+        <div className="user-add-form">
+          <h4>Agregar miembro</h4>
+          <div className="invite-row">
             <input
-              name="email"
               type="email"
-              value={form.email}
-              onChange={handleChange}
-              placeholder="caro@gmail.com"
+              value={inviteEmail}
+              onChange={e => setInviteEmail(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addMemberToActivity(inviteEmail))}
+              placeholder="email@gmail.com"
             />
+            <button
+              type="button"
+              className="btn-invite-add"
+              onClick={() => addMemberToActivity(inviteEmail)}
+              disabled={saving}
+            >+</button>
           </div>
-          <div className="form-group">
-            <label>Nombre</label>
-            <input
-              name="displayName"
-              value={form.displayName}
-              onChange={handleChange}
-              placeholder="Caro"
-            />
-          </div>
-          <div className="form-group">
-            <label>Alias MP</label>
-            <input
-              name="mpAlias"
-              value={form.mpAlias}
-              onChange={handleChange}
-              placeholder="caro.mp"
-            />
-          </div>
-          <div className="form-group">
-            <label>Alias MODO</label>
-            <input
-              name="modoAlias"
-              value={form.modoAlias}
-              onChange={handleChange}
-              placeholder="caro.modo"
-            />
-          </div>
+          <p className="member-hint">Si ya tiene cuenta, aparece arriba. Si no, queda pendiente hasta que se registre.</p>
         </div>
-        {error && <div className="form-error">{error}</div>}
-        <button type="submit" disabled={loading} className="btn-primary">
-          {loading ? 'Agregando...' : 'Agregar usuario'}
-        </button>
-      </form>
+      )}
 
+      {/* App admin: add new global user */}
+      {isAppAdmin && (
+        <div className="user-add-form" style={{ marginTop: 8 }}>
+          {!addingGlobal ? (
+            <button className="btn-new-activity" onClick={() => setAddingGlobal(true)}>
+              + Crear usuario manualmente
+            </button>
+          ) : (
+            <form onSubmit={handleAddGlobal}>
+              <h4>Nuevo usuario</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+                <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="email@gmail.com" className="edit-input" />
+                <input name="displayName" value={form.displayName} onChange={handleChange} placeholder="Nombre" className="edit-input" />
+                <input name="mpAlias" value={form.mpAlias} onChange={handleChange} placeholder="Alias MP" className="edit-input" />
+                <input name="modoAlias" value={form.modoAlias} onChange={handleChange} placeholder="Alias MODO" className="edit-input" />
+              </div>
+              {error && <div className="form-error">{error}</div>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="btn-cancel" onClick={() => setAddingGlobal(false)}>Cancelar</button>
+                <button type="submit" className="btn-save" disabled={loading}>{loading ? '...' : 'Crear'}</button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
     </div>
   )
 }
