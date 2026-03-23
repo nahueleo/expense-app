@@ -73,20 +73,31 @@ export default function UserManager({ users, currentUserDoc, currentActivity }) 
           const uIsAdmin = currentActivity?.admins?.includes(uEmail)
 
           return (
-            <div key={u.id} className="user-row">
+            <div key={u.id} className={editingId === u.id ? 'user-edit-card' : 'user-row'}>
               {editingId === u.id ? (
                 <>
-                  <input className="edit-input" value={editForm.displayName}
-                    onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
-                    placeholder="Nombre" style={{ width: 90 }} />
-                  <input className="edit-input" value={editForm.mpAlias}
-                    onChange={e => setEditForm(f => ({ ...f, mpAlias: e.target.value }))}
-                    placeholder="https://mpago.la/xxxxxx" style={{ flex: 1 }} />
-                  <input className="edit-input" value={editForm.modoAlias}
-                    onChange={e => setEditForm(f => ({ ...f, modoAlias: e.target.value }))}
-                    placeholder="alias MODO" style={{ flex: 1 }} />
-                  <button className="btn-save" onClick={() => saveEdit(u.id)}>OK</button>
-                  <button className="btn-cancel" onClick={() => setEditingId(null)}>✕</button>
+                  <div className="form-group">
+                    <label>Nombre</label>
+                    <input className="edit-input" value={editForm.displayName}
+                      onChange={e => setEditForm(f => ({ ...f, displayName: e.target.value }))}
+                      placeholder="Nombre" />
+                  </div>
+                  <div className="form-group">
+                    <label>Link MP (mpago.la/...)</label>
+                    <input className="edit-input" value={editForm.mpAlias}
+                      onChange={e => setEditForm(f => ({ ...f, mpAlias: e.target.value }))}
+                      placeholder="https://mpago.la/xxxxxx" />
+                  </div>
+                  <div className="form-group">
+                    <label>Alias MODO</label>
+                    <input className="edit-input" value={editForm.modoAlias}
+                      onChange={e => setEditForm(f => ({ ...f, modoAlias: e.target.value }))}
+                      placeholder="alias.modo" />
+                  </div>
+                  <div className="user-edit-actions">
+                    <button className="btn-cancel" onClick={() => setEditingId(null)}>Cancelar</button>
+                    <button className="btn-save" onClick={() => saveEdit(u.id)}>Guardar</button>
+                  </div>
                 </>
               ) : (
                 <>
