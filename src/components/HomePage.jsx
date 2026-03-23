@@ -5,6 +5,7 @@ import { addMonths, getCurrentMonth, formatMonthLabel } from '../utils/dates'
 import { formatARS } from '../utils/format'
 import { getActiveExpenses, calculateBalances, simplifyDebts, applyPayments } from '../utils/finance'
 import PaymentModal from './PaymentModal'
+import PaidBadge from './PaidBadge'
 
 const MONTH_RANGE = { past: 6, future: 18 }
 
@@ -31,15 +32,8 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
   const balances     = useMemo(() => applyPayments(rawBalances, payments, month), [rawBalances, payments, month])
   const transactions = useMemo(() => simplifyDebts(balances, people), [balances, people])
 
-  // Check if I already paid a specific transaction this month
-  function isPaid(toName) {
-    return payments.some(p => p.fromName === myName && p.toName === toName && p.forMonth === month)
-  }
-  function getPaidDate(toName) {
-    const p = payments.find(p => p.fromName === myName && p.toName === toName && p.forMonth === month)
-    if (!p?.paidAt) return null
-    const d = p.paidAt.toDate?.() ?? new Date(p.paidAt)
-    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+  function getPayment(fromName, toName) {
+    return payments.find(p => p.fromName === fromName && p.toName === toName && p.forMonth === month) ?? null
   }
 
   const totalMonth     = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
@@ -94,11 +88,10 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         <div className="home-card">
           <h3 className="home-card-title">Tus pagos</h3>
           {myTransactions.map((t, i) => {
-            const paid     = t.from === myName ? isPaid(t.to)    : isPaid(t.from)
-            const paidDate = t.from === myName ? getPaidDate(t.to) : getPaidDate(t.from)
+            const payment = t.from === myName ? getPayment(myName, t.to) : getPayment(t.from, myName)
 
             return (
-              <div key={i} className={`my-transaction-row ${paid ? 'transaction-paid' : ''}`}>
+              <div key={i} className={`my-transaction-row ${payment ? 'transaction-paid' : ''}`}>
                 {t.from === myName ? (
                   <>
                     <div className="transaction-info">
@@ -106,15 +99,12 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                       <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
                     </div>
                     <div className="transaction-right">
-                      {paid ? (
-                        <span className="paid-label">✓ Pagado{paidDate ? ` el ${paidDate}` : ''}</span>
+                      {payment ? (
+                        <PaidBadge payment={payment} />
                       ) : (
                         <>
                           <span className="transaction-amount negative">${formatARS(t.amount)}</span>
-                          <button
-                            className="btn-pay-action"
-                            onClick={() => setPayingTransaction(t)}
-                          >
+                          <button className="btn-pay-action" onClick={() => setPayingTransaction(t)}>
                             Pagar
                           </button>
                         </>
@@ -127,11 +117,10 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                       <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
                       <span className="transaction-label">te debe</span>
                     </div>
-                    {paid ? (
-                      <span className="paid-label">✓ Pagado{paidDate ? ` el ${paidDate}` : ''}</span>
-                    ) : (
-                      <span className="transaction-amount positive">${formatARS(t.amount)}</span>
-                    )}
+                    {payment
+                      ? <PaidBadge payment={payment} />
+                      : <span className="transaction-amount positive">${formatARS(t.amount)}</span>
+                    }
                   </>
                 )}
               </div>

@@ -25,17 +25,17 @@ const Icons = {
 }
 
 export default function App() {
-  const user                              = useAuth()
-  const { users, loading: usersLoading }       = useUsers()
-  const { activities, loading: activitiesLoading } = useActivities()
-  const { expenses, loading: expensesLoading }  = useExpenses()
-  const { payments }                            = usePayments(currentActivityId)
-
   const [tab, setTab]                     = useState('home')
   const [currentActivityId, setCurrentActivityId] = useState(
     () => localStorage.getItem('currentActivityId') || null
   )
   const [switcherOpen, setSwitcherOpen]   = useState(false)
+
+  const user                              = useAuth()
+  const { users, loading: usersLoading }       = useUsers()
+  const { activities, loading: activitiesLoading } = useActivities()
+  const { expenses, loading: expensesLoading }  = useExpenses()
+  const { payments }                            = usePayments(currentActivityId)
 
   // ── Derived state ──
   const userEmail      = user?.email?.toLowerCase()
