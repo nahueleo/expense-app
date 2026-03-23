@@ -38,13 +38,13 @@ export default function App() {
   // ── Derived state ──
   const userEmail      = user?.email?.toLowerCase()
   const currentUserDoc = users.find(u => u.email === userEmail)
-  const isAdmin        = currentUserDoc?.isAdmin === true
 
   // Activities where the current user is a member (emails normalized to lowercase)
   const myActivities = activities.filter(a =>
     a.members?.map(e => e.toLowerCase()).includes(userEmail)
   )
-  const currentActivity = myActivities.find(a => a.id === currentActivityId)
+  const currentActivity    = myActivities.find(a => a.id === currentActivityId)
+  const isActivityAdmin    = currentActivity?.admins?.includes(userEmail) ?? false
 
   // Users filtered to current activity members
   const activityUsers = currentActivity
@@ -69,7 +69,6 @@ export default function App() {
         photoURL: user.photoURL || '',
         mpAlias: '',
         modoAlias: '',
-        isAdmin: false,
         addedAt: serverTimestamp(),
       })
     }
@@ -111,7 +110,7 @@ export default function App() {
       <div className="header-user">
         <img src={user.photoURL} alt={user.displayName} className="user-avatar" referrerPolicy="no-referrer" />
         <span className="user-name">{currentUserDoc?.displayName || user.displayName}</span>
-        {isAdmin && <span className="admin-badge">admin</span>}
+        {isActivityAdmin && <span className="admin-badge">Admin</span>}
         <button className="btn-logout" onClick={() => signOut(auth)}>Salir</button>
       </div>
     </header>
@@ -140,7 +139,7 @@ export default function App() {
     { id: 'home',     label: 'Inicio',    icon: Icons.home },
     { id: 'expenses', label: 'Gastos',    icon: Icons.expenses },
     { id: 'history',  label: 'Historial', icon: Icons.history },
-    ...(isAdmin ? [{ id: 'users', label: 'Usuarios', icon: Icons.users }] : []),
+    ...(isActivityAdmin ? [{ id: 'users', label: 'Usuarios', icon: Icons.users }] : []),
   ]
 
   return (
