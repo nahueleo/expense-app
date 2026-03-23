@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { SiMercadopago } from 'react-icons/si'
+import { BsWallet2 } from 'react-icons/bs'
 import { getBadgeStyle } from '../utils/badges'
 import { normalizePayerKey, getPayerDisplay } from '../utils/users'
 
@@ -173,9 +175,9 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn-pay btn-pay-mp"
+                          title="Pagar con MercadoPago"
                         >
-                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
-                          MP
+                          <SiMercadopago size={16} />
                         </a>
                       )}
                       {modoAliases[t.to] && (
@@ -184,9 +186,9 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
                           target="_blank"
                           rel="noopener noreferrer"
                           className="btn-pay btn-pay-modo"
+                          title="Pagar con MODO"
                         >
-                          <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/></svg>
-                          MODO
+                          <BsWallet2 size={16} />
                         </a>
                       )}
                     </div>

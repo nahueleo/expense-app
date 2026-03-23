@@ -433,15 +433,17 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
 .btn-pay {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   text-decoration: none;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  white-space: nowrap;
-  transition: background 0.15s;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  transition: background 0.15s, transform 0.1s;
   color: white;
+}
+
+.btn-pay:active {
+  transform: scale(0.92);
 }
 
 .btn-pay-mp {

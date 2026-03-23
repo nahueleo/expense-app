@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { SiMercadopago } from 'react-icons/si'
+import { BsWallet2 } from 'react-icons/bs'
 import { getBadgeStyle } from '../utils/badges'
 import { normalizePayerKey, getPayerDisplay } from '../utils/users'
 
@@ -161,7 +163,8 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn-pay btn-pay-mp"
-                                  >MP</a>
+                                    title="Pagar con MercadoPago"
+                                  ><SiMercadopago size={16} /></a>
                                 )}
                                 {modoAliases[t.to] && (
                                   <a
@@ -169,7 +172,8 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn-pay btn-pay-modo"
-                                  >MODO</a>
+                                    title="Pagar con MODO"
+                                  ><BsWallet2 size={16} /></a>
                                 )}
                               </div>
                             </>
@@ -206,7 +210,8 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn-pay btn-pay-mp"
-                              >MP</a>
+                                title="Pagar con MercadoPago"
+                              ><SiMercadopago size={16} /></a>
                             )}
                             {modoAliases[t.to] && (
                               <a
@@ -214,7 +219,8 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn-pay btn-pay-modo"
-                              >MODO</a>
+                                title="Pagar con MODO"
+                              ><BsWallet2 size={16} /></a>
                             )}
                           </div>
                         </div>
