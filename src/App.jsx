@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext'
 import { useUsers } from './hooks/useUsers'
 import { useActivities } from './hooks/useActivities'
 import { useExpenses } from './hooks/useExpenses'
+import { usePayments } from './hooks/usePayments'
 import Login from './components/Login'
 import HomePage from './components/HomePage'
 import ExpenseForm from './components/ExpenseForm'
@@ -28,6 +29,7 @@ export default function App() {
   const { users, loading: usersLoading }       = useUsers()
   const { activities, loading: activitiesLoading } = useActivities()
   const { expenses, loading: expensesLoading }  = useExpenses()
+  const { payments }                            = usePayments(currentActivityId)
 
   const [tab, setTab]                     = useState('home')
   const [currentActivityId, setCurrentActivityId] = useState(
@@ -178,12 +180,16 @@ export default function App() {
             users={activityUsers}
             currentUserEmail={userEmail}
             onAddExpense={() => setTab('add')}
+            payments={payments}
+            activityId={currentActivityId}
           />
         ) : tab === 'history' ? (
           <MonthlySummary
             expenses={activityExpenses}
             users={activityUsers}
             currentUserEmail={userEmail}
+            payments={payments}
+            activityId={currentActivityId}
           />
         ) : tab === 'expenses' ? (
           <ExpenseList expenses={activityExpenses} users={activityUsers} />

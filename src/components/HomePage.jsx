@@ -3,8 +3,8 @@ import { getBadgeStyle } from '../utils/badges'
 import { getPayerDisplay } from '../utils/users'
 import { addMonths, getCurrentMonth, formatMonthLabel } from '../utils/dates'
 import { formatARS } from '../utils/format'
-import { getActiveExpenses, calculateBalances, simplifyDebts } from '../utils/finance'
-import PayButtons from './PayButtons'
+import { getActiveExpenses, calculateBalances, simplifyDebts, applyPayments } from '../utils/finance'
+import PaymentModal from './PaymentModal'
 
 const MONTH_RANGE = { past: 6, future: 18 }
 
@@ -17,17 +17,30 @@ function buildMonthOptions() {
   return months
 }
 
-export default function HomePage({ expenses, users, currentUserEmail, onAddExpense }) {
-  const [month, setMonth] = useState(getCurrentMonth)
-  const availableMonths = useMemo(buildMonthOptions, [])
+export default function HomePage({ expenses, users, currentUserEmail, onAddExpense, payments = [], activityId }) {
+  const [month, setMonth]               = useState(getCurrentMonth)
+  const [payingTransaction, setPayingTransaction] = useState(null)
+  const availableMonths                 = useMemo(buildMonthOptions, [])
 
-  const people      = users.map(u => u.displayName)
-  const myName      = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
-  const userByName  = Object.fromEntries(users.map(u => [u.displayName, u]))
+  const people     = users.map(u => u.displayName)
+  const myName     = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
+  const userByName = Object.fromEntries(users.map(u => [u.displayName, u]))
 
   const active       = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
-  const balances     = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
+  const rawBalances  = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
+  const balances     = useMemo(() => applyPayments(rawBalances, payments, month), [rawBalances, payments, month])
   const transactions = useMemo(() => simplifyDebts(balances, people), [balances, people])
+
+  // Check if I already paid a specific transaction this month
+  function isPaid(toName) {
+    return payments.some(p => p.fromName === myName && p.toName === toName && p.forMonth === month)
+  }
+  function getPaidDate(toName) {
+    const p = payments.find(p => p.fromName === myName && p.toName === toName && p.forMonth === month)
+    if (!p?.paidAt) return null
+    const d = p.paidAt.toDate?.() ?? new Date(p.paidAt)
+    return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+  }
 
   const totalMonth     = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
   const myBalance      = myName != null ? balances[myName] : null
@@ -76,35 +89,66 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
         <div className="my-hero-month">{formatMonthLabel(month)}</div>
       </div>
 
-      {/* My pending payments */}
+      {/* My transactions */}
       {myTransactions.length > 0 && (
         <div className="home-card">
-          <h3 className="home-card-title">Tus pagos pendientes</h3>
-          {myTransactions.map((t, i) => (
-            <div key={i} className="my-transaction-row">
-              {t.from === myName ? (
-                <>
-                  <div className="transaction-info">
-                    <span className="transaction-label">Pagarle a</span>
-                    <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
-                  </div>
-                  <div className="transaction-right">
-                    <span className="transaction-amount negative">${formatARS(t.amount)}</span>
-                    <PayButtons user={userByName[t.to]} amount={t.amount} />
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="transaction-info">
-                    <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
-                    <span className="transaction-label">te debe</span>
-                  </div>
-                  <span className="transaction-amount positive">${formatARS(t.amount)}</span>
-                </>
-              )}
-            </div>
-          ))}
+          <h3 className="home-card-title">Tus pagos</h3>
+          {myTransactions.map((t, i) => {
+            const paid     = t.from === myName ? isPaid(t.to)    : isPaid(t.from)
+            const paidDate = t.from === myName ? getPaidDate(t.to) : getPaidDate(t.from)
+
+            return (
+              <div key={i} className={`my-transaction-row ${paid ? 'transaction-paid' : ''}`}>
+                {t.from === myName ? (
+                  <>
+                    <div className="transaction-info">
+                      <span className="transaction-label">Pagarle a</span>
+                      <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
+                    </div>
+                    <div className="transaction-right">
+                      {paid ? (
+                        <span className="paid-label">✓ Pagado{paidDate ? ` el ${paidDate}` : ''}</span>
+                      ) : (
+                        <>
+                          <span className="transaction-amount negative">${formatARS(t.amount)}</span>
+                          <button
+                            className="btn-pay-action"
+                            onClick={() => setPayingTransaction(t)}
+                          >
+                            Pagar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="transaction-info">
+                      <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
+                      <span className="transaction-label">te debe</span>
+                    </div>
+                    {paid ? (
+                      <span className="paid-label">✓ Pagado{paidDate ? ` el ${paidDate}` : ''}</span>
+                    ) : (
+                      <span className="transaction-amount positive">${formatARS(t.amount)}</span>
+                    )}
+                  </>
+                )}
+              </div>
+            )
+          })}
         </div>
+      )}
+
+      {payingTransaction && (
+        <PaymentModal
+          transaction={payingTransaction}
+          toUser={userByName[payingTransaction.to]}
+          activityId={activityId}
+          fromName={myName}
+          users={users}
+          onClose={() => setPayingTransaction(null)}
+        />
       )}
 
       {myBalance !== null && myTransactions.length === 0 && (

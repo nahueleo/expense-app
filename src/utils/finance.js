@@ -44,6 +44,21 @@ export function getPaidInstallments(exp, currentMonth) {
   return Math.min(exp.installments, (ty - fy) * 12 + (tm - fm) + 1)
 }
 
+/**
+ * Adjusts balances by applying confirmed payments for a given month.
+ * A payment from A to B reduces A's debt and B's credit.
+ */
+export function applyPayments(balances, payments, month) {
+  const adjusted = { ...balances }
+  payments
+    .filter(p => p.forMonth === month)
+    .forEach(p => {
+      if (adjusted[p.fromName] !== undefined) adjusted[p.fromName] += p.amount
+      if (adjusted[p.toName]   !== undefined) adjusted[p.toName]   -= p.amount
+    })
+  return adjusted
+}
+
 export function getExpenseStatus(exp, currentMonth) {
   const lastMonth = addMonths(exp.firstPaymentMonth, exp.installments - 1)
   if (currentMonth > lastMonth) return 'finished'

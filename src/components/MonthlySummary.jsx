@@ -3,11 +3,13 @@ import { getBadgeStyle } from '../utils/badges'
 import { getPayerDisplay } from '../utils/users'
 import { getMonthsRange, formatMonthLabel } from '../utils/dates'
 import { formatARS } from '../utils/format'
-import { getActiveExpenses, calculateBalances, simplifyDebts } from '../utils/finance'
-import PayButtons from './PayButtons'
+import { getActiveExpenses, calculateBalances, simplifyDebts, applyPayments } from '../utils/finance'
+import PaymentModal from './PaymentModal'
 
-export default function MonthlySummary({ expenses, users, currentUserEmail }) {
-  const [expanded, setExpanded] = useState({})
+export default function MonthlySummary({ expenses, users, currentUserEmail, payments = [], activityId }) {
+  const [expanded, setExpanded]               = useState({})
+  const [payingTransaction, setPayingTransaction] = useState(null)
+  const [payingMonth, setPayingMonth]         = useState(null)
 
   const people     = users.map(u => u.displayName)
   const myName     = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
@@ -21,13 +23,22 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
       <h2>Historial mensual</h2>
       <div className="months-list">
         {months.map(month => {
-          const active       = getActiveExpenses(expenses, month)
-          const balances     = calculateBalances(expenses, month, people, users)
-          const transactions = simplifyDebts(balances, people)
-          const totalMonth   = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
-          const myBalance    = myName != null ? balances[myName] : null
-          const myTxs        = myName ? transactions.filter(t => t.from === myName || t.to === myName) : []
-          const isExpanded   = expanded[month]
+          const active          = getActiveExpenses(expenses, month)
+          const rawBalances     = calculateBalances(expenses, month, people, users)
+          const balances        = applyPayments(rawBalances, payments, month)
+          const transactions    = simplifyDebts(balances, people)
+          const totalMonth      = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
+          const myBalance       = myName != null ? balances[myName] : null
+          const myTxs           = myName ? transactions.filter(t => t.from === myName || t.to === myName) : []
+          const isExpanded      = expanded[month]
+
+          const isPaid = toName => payments.some(p => p.fromName === myName && p.toName === toName && p.forMonth === month)
+          const getPaidDate = toName => {
+            const p = payments.find(p => p.fromName === myName && p.toName === toName && p.forMonth === month)
+            if (!p?.paidAt) return null
+            const d = p.paidAt.toDate?.() ?? new Date(p.paidAt)
+            return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+          }
 
           return (
             <div key={month} className="month-card">
@@ -52,24 +63,39 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
                   {myName && myTxs.length > 0 && (
                     <div className="my-summary">
                       <h4>Tu resumen</h4>
-                      {myTxs.map((t, i) => (
-                        <div key={i} className="my-transaction">
-                          {t.from === myName ? (
-                            <>
-                              <span>Debés pagarle a</span>
-                              <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
-                              <span className="my-amount negative">-${formatARS(t.amount)}</span>
-                              <PayButtons user={userByName[t.to]} amount={t.amount} />
-                            </>
-                          ) : (
-                            <>
-                              <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
-                              <span>te debe</span>
-                              <span className="my-amount positive">+${formatARS(t.amount)}</span>
-                            </>
-                          )}
-                        </div>
-                      ))}
+                      {myTxs.map((t, i) => {
+                        const paid     = t.from === myName ? isPaid(t.to) : isPaid(t.from)
+                        const paidDate = t.from === myName ? getPaidDate(t.to) : getPaidDate(t.from)
+                        return (
+                          <div key={i} className={`my-transaction ${paid ? 'transaction-paid' : ''}`}>
+                            {t.from === myName ? (
+                              <>
+                                <span>Pagarle a</span>
+                                <span className="badge" style={getBadgeStyle(t.to, users)}>{t.to}</span>
+                                {paid ? (
+                                  <span className="paid-label my-amount">✓ Pagado{paidDate ? ` el ${paidDate}` : ''}</span>
+                                ) : (
+                                  <>
+                                    <span className="my-amount negative">-${formatARS(t.amount)}</span>
+                                    <button className="btn-pay-action" onClick={() => { setPayingTransaction(t); setPayingMonth(month) }}>
+                                      Pagar
+                                    </button>
+                                  </>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <span className="badge" style={getBadgeStyle(t.from, users)}>{t.from}</span>
+                                <span>te debe</span>
+                                {paid
+                                  ? <span className="paid-label my-amount">✓ Pagado{paidDate ? ` el ${paidDate}` : ''}</span>
+                                  : <span className="my-amount positive">+${formatARS(t.amount)}</span>
+                                }
+                              </>
+                            )}
+                          </div>
+                        )
+                      })}
                     </div>
                   )}
 
@@ -125,6 +151,18 @@ export default function MonthlySummary({ expenses, users, currentUserEmail }) {
           )
         })}
       </div>
+
+      {payingTransaction && (
+        <PaymentModal
+          transaction={payingTransaction}
+          toUser={userByName[payingTransaction.to]}
+          activityId={activityId}
+          fromName={myName}
+          users={users}
+          initialMonth={payingMonth}
+          onClose={() => { setPayingTransaction(null); setPayingMonth(null) }}
+        />
+      )}
     </div>
   )
 }
