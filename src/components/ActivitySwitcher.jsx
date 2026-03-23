@@ -10,16 +10,31 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
   const [internalOpen, setInternalOpen] = useState(false)
   const open = externalOpen !== undefined ? externalOpen : internalOpen
   const [creating, setCreating] = useState(false)
+  const [form, setForm] = useState({ name: '', emoji: '✈️', type: 'Viaje', members: [] })
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const current = activities.find(a => a.id === currentActivityId)
 
   function setOpen(val) {
     setInternalOpen(val)
     onOpenChange?.(val)
-    if (!val) setCreating(false)
+    if (!val) { setCreating(false); setInviteEmail('') }
   }
-  const [form, setForm] = useState({ name: '', emoji: '✈️', type: 'Viaje', members: [] })
-  const [saving, setSaving] = useState(false)
 
-  const current = activities.find(a => a.id === currentActivityId)
+  // People I know = users who share at least one activity with me (excluding myself)
+  const knownEmails = new Set()
+  activities
+    .filter(a => a.members?.includes(currentUserEmail))
+    .forEach(a => a.members?.forEach(email => {
+      if (email !== currentUserEmail) knownEmails.add(email)
+    }))
+  const knownUsers = users.filter(u => knownEmails.has(u.email))
+
+  // Invited emails that aren't registered users yet
+  const invitedUnknown = form.members.filter(
+    email => email !== currentUserEmail && !users.find(u => u.email === email)
+  )
 
   function toggleMember(email) {
     setForm(f => ({
@@ -30,11 +45,19 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
     }))
   }
 
+  function addInvite() {
+    const email = inviteEmail.trim().toLowerCase()
+    if (!email || !email.includes('@') || form.members.includes(email)) return
+    setForm(f => ({ ...f, members: [...f.members, email] }))
+    setInviteEmail('')
+  }
+
   async function handleCreate(e) {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
-    const members = form.members.length > 0 ? form.members : users.map(u => u.email)
+    // Always include self
+    const members = Array.from(new Set([currentUserEmail, ...form.members]))
     const ref = await addDoc(collection(db, 'activities'), {
       name: form.name.trim(),
       emoji: form.emoji,
@@ -47,30 +70,33 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
     setSaving(false)
     setCreating(false)
     setForm({ name: '', emoji: '✈️', type: 'Viaje', members: [] })
+    setInviteEmail('')
     onSelect(ref.id)
     setOpen(false)
   }
 
   return (
     <>
-      {/* Trigger in header */}
       <button className="activity-trigger" onClick={() => setOpen(true)}>
         <span className="activity-trigger-emoji">{current?.emoji ?? '🌍'}</span>
-        <span className="activity-trigger-name">{current?.name ?? 'Todas las actividades'}</span>
+        <span className="activity-trigger-name">{current?.name ?? 'Mis actividades'}</span>
         <span className="activity-trigger-chevron">⌄</span>
       </button>
 
-      {/* Bottom sheet — rendered via portal to escape header stacking context */}
       {open && createPortal(
-        <div className="sheet-overlay" onClick={() => { setOpen(false); setCreating(false) }}>
+        <div className="sheet-overlay" onClick={() => setOpen(false)}>
           <div className="sheet" onClick={e => e.stopPropagation()}>
             <div className="sheet-handle" />
 
             {!creating ? (
               <>
                 <h3 className="sheet-title">Actividades</h3>
-
                 <div className="activity-list">
+                  {activities.length === 0 && (
+                    <p style={{ color: 'var(--text-muted)', fontSize: 14, padding: '8px 0' }}>
+                      No tenés actividades todavía.
+                    </p>
+                  )}
                   {activities.map(a => (
                     <button
                       key={a.id}
@@ -86,10 +112,17 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
                     </button>
                   ))}
                 </div>
-
                 <button className="btn-new-activity" onClick={() => setCreating(true)}>
                   + Nueva actividad
                 </button>
+                {currentActivityId && (
+                  <button
+                    className="btn-all-activities"
+                    onClick={() => { onSelect(null); setOpen(false) }}
+                  >
+                    Ver todas las actividades
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -113,7 +146,7 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
                     <input
                       value={form.name}
                       onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="Viaje Ushuaia 2026"
+                      placeholder="Viaje Ushuaia 2027..."
                       autoFocus
                     />
                   </div>
@@ -125,21 +158,53 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
                     </select>
                   </div>
 
-                  <div className="form-group">
-                    <label>Participantes</label>
-                    <div className="member-picker">
-                      {users.map(u => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          className={`member-btn ${form.members.includes(u.email) ? 'selected' : ''}`}
-                          onClick={() => toggleMember(u.email)}
-                        >
-                          {u.displayName}
-                        </button>
-                      ))}
+                  {/* Known people from other activities */}
+                  {knownUsers.length > 0 && (
+                    <div className="form-group">
+                      <label>Personas conocidas</label>
+                      <div className="member-picker">
+                        {knownUsers.map(u => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            className={`member-btn ${form.members.includes(u.email) ? 'selected' : ''}`}
+                            onClick={() => toggleMember(u.email)}
+                          >
+                            {u.displayName}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <p className="member-hint">Sin selección = todos</p>
+                  )}
+
+                  {/* Invite by email */}
+                  <div className="form-group">
+                    <label>Invitar por email</label>
+                    <div className="invite-row">
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addInvite())}
+                        placeholder="amigo@gmail.com"
+                      />
+                      <button type="button" className="btn-invite-add" onClick={addInvite}>+</button>
+                    </div>
+
+                    {/* Invited list */}
+                    {invitedUnknown.length > 0 && (
+                      <div className="invited-list">
+                        {invitedUnknown.map(email => (
+                          <div key={email} className="invited-chip">
+                            <span>{email}</span>
+                            <button type="button" onClick={() => toggleMember(email)}>✕</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="member-hint">
+                      Recibirán acceso cuando inicien sesión con ese email.
+                    </p>
                   </div>
 
                   <div className="activity-form-actions">

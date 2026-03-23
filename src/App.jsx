@@ -38,7 +38,6 @@ export default function App() {
 
   const currentUserDoc = users.find(u => u.email === user?.email?.toLowerCase())
   const isAdmin = currentUserDoc?.isAdmin === true
-  const isAllowed = !!currentUserDoc
   const currentActivity = activities.find(a => a.id === currentActivityId)
   const filteredExpenses = currentActivityId
     ? expenses.filter(e => e.activityId === currentActivityId)
@@ -51,13 +50,21 @@ export default function App() {
     setTab('home')
   }
 
-  // Bootstrap admin
+  // Auto-register any Google user on first login
   useEffect(() => {
-    if (!user || usersLoading || user.email?.toLowerCase() !== BOOTSTRAP_EMAIL) return
-    const existingDoc = users.find(u => u.email === BOOTSTRAP_EMAIL)
+    if (!user || usersLoading) return
+    const existingDoc = users.find(u => u.email === user.email?.toLowerCase())
     if (!existingDoc) {
-      addDoc(collection(db, 'users'), { email: BOOTSTRAP_EMAIL, displayName: 'nahuel', mpAlias: '', isAdmin: true, addedAt: serverTimestamp() })
-    } else if (!existingDoc.isAdmin) {
+      addDoc(collection(db, 'users'), {
+        email: user.email.toLowerCase(),
+        displayName: user.displayName || user.email.split('@')[0],
+        photoURL: user.photoURL || '',
+        mpAlias: '',
+        modoAlias: '',
+        isAdmin: user.email?.toLowerCase() === BOOTSTRAP_EMAIL,
+        addedAt: serverTimestamp(),
+      })
+    } else if (user.email?.toLowerCase() === BOOTSTRAP_EMAIL && !existingDoc.isAdmin) {
       updateDoc(doc(db, 'users', existingDoc.id), { isAdmin: true })
     }
   }, [user, usersLoading, users])
@@ -72,22 +79,8 @@ export default function App() {
     return unsub
   }, [user])
 
-  if (user === undefined) return <div className="loading">Cargando...</div>
+  if (user === undefined || (user && usersLoading)) return <div className="loading">Cargando...</div>
   if (user === null) return <Login />
-  if (usersLoading) return <div className="loading">Cargando...</div>
-
-  if (!isAllowed) {
-    return (
-      <div className="login-screen">
-        <div className="login-card">
-          <h1>Sin acceso</h1>
-          <p className="login-subtitle">{user.email}</p>
-          <p className="login-no-access">Tu cuenta no tiene acceso. Pedile al admin que te agregue.</p>
-          <button className="btn-google" onClick={() => signOut(auth)}>Cerrar sesión</button>
-        </div>
-      </div>
-    )
-  }
 
   const NAV = [
     { id: 'home',     label: 'Inicio',    icon: Icons.home },
@@ -178,7 +171,7 @@ export default function App() {
         ) : tab === 'expenses' ? (
           <ExpenseList expenses={filteredExpenses} users={users} />
         ) : (
-          <UserManager users={users} currentUserDoc={currentUserDoc} activities={activities} expenses={expenses} />
+          <UserManager users={users} currentUserDoc={currentUserDoc} />
         )}
       </main>
     </div>
