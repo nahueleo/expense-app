@@ -23,20 +23,21 @@ export default function MonthlySummary({ expenses, users, currentUserEmail, paym
       <h2>Historial</h2>
       <div className="months-list">
         {months.map(month => {
-          const active       = getActiveExpenses(expenses, month)
-          const rawBalances  = calculateBalances(expenses, month, people, users)
-          const balances     = applyPayments(rawBalances, payments, month)
-          const totalMonth   = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
+          const active          = getActiveExpenses(expenses, month)
+          const rawBalances     = calculateBalances(expenses, month, people, users)
+          const adjustedBalances = applyPayments(rawBalances, payments, month)
+          const totalMonth      = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
 
-          // Guard: no transactions for months without active expenses
-          const transactions = active.length > 0 ? simplifyDebts(balances, people) : []
-          const myBalance    = active.length > 0 && myName != null ? balances[myName] : null
+          // Raw transactions (before payments) — used to render all rows including paid ones
+          const allTransactions = active.length > 0 ? simplifyDebts(rawBalances, people) : []
+          // Adjusted balance for header pill — reflects payments made
+          const myBalance       = active.length > 0 && myName != null ? adjustedBalances[myName] : null
           const isExpanded   = expanded[month]
 
           const getPayment = (fromName, toName) =>
             payments.find(p => p.fromName === fromName && p.toName === toName && p.forMonth === month) ?? null
 
-          const allPaid = transactions.length > 0 && transactions.every(t => getPayment(t.from, t.to))
+          const allPaid = allTransactions.length > 0 && allTransactions.every(t => getPayment(t.from, t.to))
 
           return (
             <div key={month} className="month-card">
@@ -56,11 +57,11 @@ export default function MonthlySummary({ expenses, users, currentUserEmail, paym
 
               {isExpanded && (
                 <div className="month-body">
-                  {transactions.length === 0 ? (
+                  {allTransactions.length === 0 ? (
                     <div className="no-debts">Sin deudas este mes</div>
                   ) : (
                     <div className="history-transactions">
-                      {transactions.map((t, i) => {
+                      {allTransactions.map((t, i) => {
                         const payment  = getPayment(t.from, t.to)
                         const isMyDebt = t.from === myName
 

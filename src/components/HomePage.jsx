@@ -27,10 +27,9 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
   const myName     = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
   const userByName = Object.fromEntries(users.map(u => [u.displayName, u]))
 
-  const active       = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
-  const rawBalances  = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
-  const balances     = useMemo(() => applyPayments(rawBalances, payments, month), [rawBalances, payments, month])
-  const transactions = useMemo(() => simplifyDebts(balances, people), [balances, people])
+  const active           = useMemo(() => getActiveExpenses(expenses, month), [expenses, month])
+  const rawBalances      = useMemo(() => calculateBalances(expenses, month, people, users), [expenses, month, people, users])
+  const adjustedBalances = useMemo(() => applyPayments(rawBalances, payments, month), [rawBalances, payments, month])
 
   function getPayment(fromName, toName) {
     return payments.find(p => p.fromName === fromName && p.toName === toName && p.forMonth === month) ?? null
@@ -38,11 +37,11 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
 
   const totalMonth = active.reduce((s, e) => s + e.totalAmount / e.installments, 0)
 
-  // Only show transactions/balances for months that have active expenses.
-  // If no expenses exist, payments for that month would create phantom debts.
-  const visibleTransactions = active.length > 0 ? transactions : []
-  const myBalance           = active.length > 0 && myName != null ? balances[myName] : null
-  const myTransactions      = myName ? visibleTransactions.filter(t => t.from === myName || t.to === myName) : []
+  // Raw transactions (before payments) — show all rows including paid ones
+  const allTransactions = useMemo(() => active.length > 0 ? simplifyDebts(rawBalances, people) : [], [active, rawBalances, people])
+  // Adjusted balance for hero — reflects confirmed payments
+  const myBalance       = active.length > 0 && myName != null ? adjustedBalances[myName] : null
+  const myTransactions  = myName ? allTransactions.filter(t => t.from === myName || t.to === myName) : []
 
   const payerTotals = {}
   active.forEach(exp => {
