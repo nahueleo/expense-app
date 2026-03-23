@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { getBadgeStyle } from '../utils/badges'
 import { normalizePayerKey, getPayerDisplay } from '../utils/users'
 
@@ -67,7 +67,25 @@ function simplifyDebts(balances, people) {
 }
 
 export default function HomePage({ expenses, users, currentUserEmail, onAddExpense }) {
-  const month = getCurrentMonth()
+  const [month, setMonth] = useState(getCurrentMonth())
+
+  const availableMonths = useMemo(() => {
+    if (expenses.length === 0) return [getCurrentMonth()]
+    let min = expenses[0].firstPaymentMonth
+    let max = expenses[0].firstPaymentMonth
+    expenses.forEach(exp => {
+      if (exp.firstPaymentMonth < min) min = exp.firstPaymentMonth
+      const end = addMonths(exp.firstPaymentMonth, exp.installments - 1)
+      if (end > max) max = end
+    })
+    const months = []
+    let current = min
+    while (current <= max) {
+      months.push(current)
+      current = addMonths(current, 1)
+    }
+    return months
+  }, [expenses])
 
   const people = users.length > 0 ? users.map(u => u.displayName) : ['nahuel', 'Caro', 'Juli']
   const myName = users.find(u => u.email === currentUserEmail?.toLowerCase())?.displayName
@@ -90,8 +108,35 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
     payerTotals[key] = (payerTotals[key] || 0) + exp.totalAmount / exp.installments
   })
 
+  const currentMonthYM = getCurrentMonth()
+
   return (
     <div className="home-page">
+
+      {/* Month selector */}
+      <div className="month-selector">
+        <button
+          className="month-nav-btn"
+          onClick={() => setMonth(m => addMonths(m, -1))}
+          disabled={month <= availableMonths[0]}
+        >‹</button>
+        <select
+          value={month}
+          onChange={e => setMonth(e.target.value)}
+          className="month-select"
+        >
+          {availableMonths.map(m => (
+            <option key={m} value={m}>
+              {formatMonthLabel(m)}{m === currentMonthYM ? ' (este mes)' : ''}
+            </option>
+          ))}
+        </select>
+        <button
+          className="month-nav-btn"
+          onClick={() => setMonth(m => addMonths(m, 1))}
+          disabled={month >= availableMonths[availableMonths.length - 1]}
+        >›</button>
+      </div>
 
       {/* Hero: my situation */}
       <div className={`my-hero ${myBalance === null ? '' : myBalance >= 0 ? 'hero-positive' : 'hero-negative'}`}>

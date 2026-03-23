@@ -548,6 +548,57 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
   gap: 16px;
 }
 
+/* Month selector */
+.month-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.month-select {
+  flex: 1;
+  padding: 10px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--green-dark);
+  background: var(--surface);
+  cursor: pointer;
+  text-align: center;
+  outline: none;
+}
+
+.month-select:focus {
+  border-color: var(--green-accent);
+  box-shadow: 0 0 0 3px rgba(82,183,136,0.15);
+}
+
+.month-nav-btn {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  width: 40px;
+  height: 42px;
+  font-size: 20px;
+  color: var(--green-dark);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.month-nav-btn:hover:not(:disabled) {
+  background: var(--green-pale);
+}
+
+.month-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .my-hero {
   border-radius: var(--radius);
   padding: 28px 24px;
