@@ -40,6 +40,14 @@ export default function App() {
   // Only show activities where the current user is a member
   const myActivities = activities.filter(a => a.members?.includes(user?.email?.toLowerCase()))
   const currentActivity = myActivities.find(a => a.id === currentActivityId)
+
+  // If stored activity no longer belongs to user, clear it
+  useEffect(() => {
+    if (currentActivityId && myActivities.length > 0 && !myActivities.find(a => a.id === currentActivityId)) {
+      setCurrentActivityId(null)
+      localStorage.removeItem('currentActivityId')
+    }
+  }, [currentActivityId, myActivities])
   const filteredExpenses = currentActivityId
     ? expenses.filter(e => e.activityId === currentActivityId)
     : []
@@ -94,7 +102,7 @@ export default function App() {
       <div className="app">
         <header>
           <ActivitySwitcher
-            activities={activities}
+            activities={myActivities}
             currentActivityId={null}
             onSelect={selectActivity}
             currentUserEmail={user.email}
@@ -111,7 +119,7 @@ export default function App() {
         </header>
         <main style={{ paddingBottom: 32 }}>
           <ActivitiesOverview
-            activities={activities}
+            activities={myActivities}
             expenses={expenses}
             users={users}
             onSelect={selectActivity}
@@ -127,7 +135,7 @@ export default function App() {
     <div className="app">
       <header>
         <ActivitySwitcher
-          activities={activities}
+          activities={myActivities}
           currentActivityId={currentActivityId}
           onSelect={selectActivity}
           currentUserEmail={user.email}
@@ -160,7 +168,7 @@ export default function App() {
 
       <main>
         {tab === 'add' ? (
-          <ExpenseForm user={user} users={users} activities={activities} currentActivityId={currentActivityId} onAdded={() => setTab('expenses')} />
+          <ExpenseForm user={user} users={users} activities={myActivities} currentActivityId={currentActivityId} onAdded={() => setTab('expenses')} />
         ) : expensesLoading ? (
           <div className="loading">Cargando...</div>
         ) : tab === 'home' ? (
