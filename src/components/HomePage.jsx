@@ -46,6 +46,19 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
     payerTotals[key] = (payerTotals[key] || 0) + exp.totalAmount / exp.installments
   })
 
+  // What I personally paid this month:
+  // 1. Expenses where I'm the payer (I fronted the money)
+  const myPayerTotal = myName
+    ? active
+        .filter(exp => getPayerDisplay(exp.payer, users) === myName)
+        .reduce((s, e) => s + e.totalAmount / e.installments, 0)
+    : 0
+  // 2. Confirmed payments I made to others for this month
+  const myConfirmedPayments = payments
+    .filter(p => p.fromName === myName && p.forMonth === month)
+    .reduce((s, p) => s + p.amount, 0)
+  const totalIPaid = myPayerTotal + myConfirmedPayments
+
   const currentMonthYM = getCurrentMonth()
 
   return (
@@ -151,15 +164,17 @@ export default function HomePage({ expenses, users, currentUserEmail, onAddExpen
       <div className="stats-row">
         <div className="stat-card">
           <div className="stat-value">${formatARS(totalMonth)}</div>
-          <div className="stat-label">Total del mes</div>
+          <div className="stat-label">Total mes</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{active.length}</div>
-          <div className="stat-label">Gastos activos</div>
+          <div className="stat-value" style={{ color: 'var(--green-ios)' }}>${formatARS(totalIPaid)}</div>
+          <div className="stat-label">Ya pagaste</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{transactions.length}</div>
-          <div className="stat-label">Transacciones</div>
+          <div className="stat-value" style={{ color: myBalance !== null && myBalance < 0 ? 'var(--red)' : undefined }}>
+            {myBalance !== null ? `$${formatARS(myBalance)}` : '—'}
+          </div>
+          <div className="stat-label">{myBalance !== null && myBalance >= 0 ? 'Te deben' : 'Debés'}</div>
         </div>
       </div>
 
