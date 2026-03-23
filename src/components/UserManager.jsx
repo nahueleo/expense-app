@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, addDoc, deleteDoc, doc, updateDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore'
 
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 
 const emptyForm = { email: '', displayName: '', mpAlias: '', modoAlias: '' }
 
-export default function UserManager({ users, currentUserDoc }) {
+export default function UserManager({ users, currentUserDoc, activities, expenses }) {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -45,6 +45,38 @@ export default function UserManager({ users, currentUserDoc }) {
     if (!window.confirm(`Eliminar usuario "${name}"?`)) return
     await deleteDoc(doc(db, 'users', id))
     if (editingId === id) setEditingId(null)
+  }
+
+  const [migrating, setMigrating] = useState(false)
+  const [migrateMsg, setMigrateMsg] = useState('')
+
+  async function migrateToUshuaia() {
+    if (!window.confirm('Crear actividad "Viaje a Ushuaia ⛷️" y asignarle todos los gastos sin actividad?')) return
+    setMigrating(true)
+    setMigrateMsg('')
+    try {
+      // Check if activity already exists
+      let activityId = activities.find(a => a.name.toLowerCase().includes('ushuaia'))?.id
+      if (!activityId) {
+        const ref = await addDoc(collection(db, 'activities'), {
+          name: 'Viaje a Ushuaia',
+          emoji: '⛷️',
+          type: 'Viaje',
+          members: users.map(u => u.email),
+          admins: [currentUserDoc?.email],
+          createdBy: currentUserDoc?.email,
+          createdAt: serverTimestamp(),
+        })
+        activityId = ref.id
+      }
+      // Update all expenses without activityId
+      const toMigrate = expenses.filter(e => !e.activityId)
+      await Promise.all(toMigrate.map(e => updateDoc(doc(db, 'expenses', e.id), { activityId })))
+      setMigrateMsg(`✓ ${toMigrate.length} gastos migrados a "Viaje a Ushuaia ⛷️"`)
+    } catch (err) {
+      setMigrateMsg('Error: ' + err.message)
+    }
+    setMigrating(false)
   }
 
   async function toggleAdmin(u) {
@@ -182,6 +214,19 @@ export default function UserManager({ users, currentUserDoc }) {
           {loading ? 'Agregando...' : 'Agregar usuario'}
         </button>
       </form>
+
+      <div className="migration-section">
+        <h4>Migración de datos</h4>
+        <p>Crea la actividad "Viaje a Ushuaia ⛷️" y asigna todos los gastos que no tienen actividad.</p>
+        <button
+          className="btn-migrate"
+          onClick={migrateToUshuaia}
+          disabled={migrating}
+        >
+          {migrating ? 'Migrando...' : '⛷️ Migrar gastos a Ushuaia'}
+        </button>
+        {migrateMsg && <p className="migrate-msg">{migrateMsg}</p>}
+      </div>
     </div>
   )
 }

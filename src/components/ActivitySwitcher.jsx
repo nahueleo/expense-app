@@ -32,6 +32,7 @@ export default function ActivitySwitcher({ activities, currentActivityId, onSele
       emoji: form.emoji,
       type: form.type,
       members,
+      admins: [currentUserEmail],
       createdBy: currentUserEmail,
       createdAt: serverTimestamp(),
     })

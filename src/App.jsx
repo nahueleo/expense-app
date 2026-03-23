@@ -177,7 +177,7 @@ export default function App() {
         ) : tab === 'expenses' ? (
           <ExpenseList expenses={filteredExpenses} users={users} />
         ) : (
-          <UserManager users={users} currentUserDoc={currentUserDoc} />
+          <UserManager users={users} currentUserDoc={currentUserDoc} activities={activities} expenses={expenses} />
         )}
       </main>
     </div>
