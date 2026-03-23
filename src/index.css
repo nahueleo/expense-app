@@ -242,21 +242,63 @@ header h1 {
 .paid-badge-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.btn-delete-payment {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 16px;
+.btn-anular {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--red-pale);
+  border: 1px solid rgba(255,59,48,0.25);
+  border-radius: 10px;
+  padding: 3px 9px;
   cursor: pointer;
-  padding: 0 2px;
-  line-height: 1;
   -webkit-tap-highlight-color: transparent;
-  opacity: 0.6;
+  font-family: inherit;
 }
-.btn-delete-payment:active { opacity: 1; color: var(--red); }
+.btn-anular:active { opacity: 0.7; }
+
+/* History rows */
+.history-transactions { display: flex; flex-direction: column; gap: 2px; }
+
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+  border-bottom: 0.5px solid var(--border);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.history-row:last-child { border-bottom: none; }
+
+.history-row-paid { opacity: 0.75; background: #f9fff9; border-radius: 8px; }
+.history-row-mine { background: #fffbf0; border-radius: 8px; }
+
+.history-row-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.history-row-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.history-arrow { font-size: 16px; color: var(--text-muted); }
+
+.history-amount {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.month-all-paid {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--green-ios);
+  background: #d3f9d8;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.paid-text { color: var(--green-ios); }
+.negative-text { color: var(--red); }
 
 .btn-pay-action {
   background: var(--green-mid);

@@ -11,14 +11,14 @@ export default function PaidBadge({ payment }) {
   })()
 
   async function handleDelete() {
-    if (!window.confirm('¿Eliminar este pago? Los balances volverán a mostrar la deuda.')) return
+    if (!window.confirm('¿Anular este pago? La deuda volverá a aparecer.')) return
     await deleteDoc(doc(db, 'payments', payment.id))
   }
 
   return (
     <span className="paid-badge-wrap">
       <span className="paid-label">✓ Pagado{date ? ` el ${date}` : ''}</span>
-      <button className="btn-delete-payment" onClick={handleDelete} title="Eliminar pago">×</button>
+      <button className="btn-anular" onClick={handleDelete}>Anular</button>
     </span>
   )
 }
