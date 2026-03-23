@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { collection, addDoc, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore'
+
 import { db } from '../firebase'
 import { getBadgeStyle } from '../utils/badges'
 
 const emptyForm = { email: '', displayName: '', mpAlias: '' }
 
-export default function UserManager({ users }) {
+export default function UserManager({ users, currentUserDoc }) {
   const [form, setForm] = useState(emptyForm)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,6 +44,12 @@ export default function UserManager({ users }) {
     if (!window.confirm(`Eliminar usuario "${name}"?`)) return
     await deleteDoc(doc(db, 'users', id))
     if (editingId === id) setEditingId(null)
+  }
+
+  async function toggleAdmin(u) {
+    // Can't remove your own admin
+    if (u.id === currentUserDoc?.id && u.isAdmin) return
+    await updateDoc(doc(db, 'users', u.id), { isAdmin: !u.isAdmin })
   }
 
   function startEdit(u) {
@@ -100,6 +107,14 @@ export default function UserManager({ users }) {
                     : <span className="user-mp-alias" style={{ color: '#aaa' }}>Sin alias MP</span>
                   }
                 </div>
+                <button
+                  className={`btn-admin-toggle ${u.isAdmin ? 'is-admin' : ''}`}
+                  onClick={() => toggleAdmin(u)}
+                  title={u.isAdmin ? 'Quitar admin' : 'Hacer admin'}
+                  disabled={u.id === currentUserDoc?.id && u.isAdmin}
+                >
+                  {u.isAdmin ? '★' : '☆'}
+                </button>
                 <button className="btn-edit" onClick={() => startEdit(u)} title="Editar">✎</button>
                 <button className="btn-delete" onClick={() => handleRemove(u.id, u.displayName)}>x</button>
               </>

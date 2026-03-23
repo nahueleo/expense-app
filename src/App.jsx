@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, orderBy, query, addDoc, serverTimestamp } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { signOut } from 'firebase/auth'
 import { db, auth } from './firebase'
 import { useAuth } from './AuthContext'
@@ -11,7 +11,8 @@ import ExpenseList from './components/ExpenseList'
 import MonthlySummary from './components/MonthlySummary'
 import UserManager from './components/UserManager'
 
-const ADMIN_EMAIL = 'nahueleo@gmail.com'
+// Bootstrap email: always gets admin on first login if no admins exist
+const BOOTSTRAP_EMAIL = 'nahueleo@gmail.com'
 
 export default function App() {
   const user = useAuth()
@@ -20,29 +21,36 @@ export default function App() {
   const [expensesLoading, setExpensesLoading] = useState(true)
   const [tab, setTab] = useState('home')
 
-  const isAdmin = user?.email === ADMIN_EMAIL
-  const isAllowed = isAdmin || users.some(u => u.email === user?.email?.toLowerCase())
+  const currentUserDoc = users.find(u => u.email === user?.email?.toLowerCase())
+  const isAdmin = currentUserDoc?.isAdmin === true
+  const isAllowed = !!currentUserDoc
 
-  // Auto-register admin in users collection only if no user with that email exists
+  // Bootstrap: ensure BOOTSTRAP_EMAIL always has admin access
   useEffect(() => {
-    if (!user || usersLoading || !isAdmin) return
-    if (users.length === 0) return // wait until users are loaded
-    const alreadyRegistered = users.some(u => u.email === user.email?.toLowerCase())
-    if (!alreadyRegistered) {
+    if (!user || usersLoading || user.email?.toLowerCase() !== BOOTSTRAP_EMAIL) return
+
+    const existingDoc = users.find(u => u.email === BOOTSTRAP_EMAIL)
+
+    if (!existingDoc) {
+      // First time: create user doc with isAdmin=true
       addDoc(collection(db, 'users'), {
-        email: user.email.toLowerCase(),
+        email: BOOTSTRAP_EMAIL,
         displayName: 'nahuel',
         mpAlias: '',
+        isAdmin: true,
         addedAt: serverTimestamp(),
       })
+    } else if (!existingDoc.isAdmin) {
+      // Doc exists but isAdmin not set: fix it
+      updateDoc(doc(db, 'users', existingDoc.id), { isAdmin: true })
     }
-  }, [user, usersLoading, isAdmin]) // intentionally exclude `users` to run only once
+  }, [user, usersLoading, users])
 
   useEffect(() => {
     if (!user) return
     const q = query(collection(db, 'expenses'), orderBy('createdAt', 'asc'))
     const unsub = onSnapshot(q, (snap) => {
-      setExpenses(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      setExpenses(snap.docs.map(d => ({ id: d.id, ...d.data() })))
       setExpensesLoading(false)
     }, (err) => {
       console.error(err)
@@ -82,10 +90,11 @@ export default function App() {
     <div className="app">
       <header>
         <h1>Gastos Compartidos</h1>
-        <p className="subtitle">{users.map(u => u.displayName).join(' · ') || 'nahuel · Caro · Juli'}</p>
+        <p className="subtitle">{users.map(u => u.displayName).join(' · ')}</p>
         <div className="header-user">
           <img src={user.photoURL} alt={user.displayName} className="user-avatar" referrerPolicy="no-referrer" />
-          <span className="user-name">{user.displayName}</span>
+          <span className="user-name">{currentUserDoc?.displayName || user.displayName}</span>
+          {isAdmin && <span className="admin-badge">admin</span>}
           <button className="btn-logout" onClick={() => signOut(auth)}>Salir</button>
         </div>
       </header>
@@ -120,7 +129,7 @@ export default function App() {
         ) : tab === 'expenses' ? (
           <ExpenseList expenses={expenses} users={users} />
         ) : (
-          <UserManager users={users} />
+          <UserManager users={users} currentUserDoc={currentUserDoc} />
         )}
       </main>
     </div>

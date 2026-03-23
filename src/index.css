@@ -893,6 +893,49 @@ td.text-muted { color: var(--text-muted); font-size: 13px; }
   opacity: 0.9;
 }
 
+.admin-badge {
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.25);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-admin-toggle {
+  background: none;
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-admin-toggle.is-admin {
+  color: #e6a817;
+  border-color: #e6a817;
+  background: #fff9e6;
+}
+
+.btn-admin-toggle:hover:not(:disabled):not(.is-admin) {
+  background: #fff9e6;
+  color: #e6a817;
+  border-color: #e6a817;
+}
+
+.btn-admin-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .btn-logout {
   background: rgba(255,255,255,0.15);
   color: white;
